@@ -27,7 +27,8 @@ export declare class ClipboardService implements IClipboardService {
     private processRangeCell(rowNode, column, value, func);
     private getRowNode(gridRow);
     copySelectedRowsToClipboard(includeHeaders?: boolean, columnKeys?: (string | Column | ColDef)[]): void;
-    private copyDataToClipboard(data);
+    private htmlFormatter(dataObj?);
+    private copyDataToClipboard(data, dataObj?);
     private executeOnTempElement(callbackNow, callbackAfter?);
     private dataToArray(strData);
 }

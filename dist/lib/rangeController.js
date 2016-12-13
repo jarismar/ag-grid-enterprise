@@ -1,4 +1,5 @@
 // ag-grid-enterprise v7.0.2
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -155,7 +156,7 @@ var RangeController = (function () {
         if (main_1.Utils.missing(this.cellRanges) || !multiSelectKeyPressed) {
             this.cellRanges = [];
         }
-        var cell = this.mouseEventService.getCellForMouseEvent(mouseEvent);
+        var cell = this.mouseEventService.getGridCellForEvent(mouseEvent);
         if (main_1.Utils.missing(cell)) {
             // if drag wasn't on cell, then do nothing, including do not set dragging=true,
             // (which them means onDragging and onDragStop do nothing)
@@ -196,7 +197,7 @@ var RangeController = (function () {
             return;
         }
         this.lastMouseEvent = mouseEvent;
-        var cell = this.mouseEventService.getCellForMouseEvent(mouseEvent);
+        var cell = this.mouseEventService.getGridCellForEvent(mouseEvent);
         if (main_1.Utils.missing(cell)) {
             return;
         }
@@ -216,9 +217,9 @@ var RangeController = (function () {
         }
     };
     RangeController.prototype.updateSelectedColumns = function (columnFrom, columnTo) {
-        var allDisplayedColumns = this.columnController.getAllDisplayedColumns();
-        var fromIndex = allDisplayedColumns.indexOf(columnFrom);
-        var toIndex = allDisplayedColumns.indexOf(columnTo);
+        var allColumns = this.columnController.getAllDisplayedColumns();
+        var fromIndex = allColumns.indexOf(columnFrom);
+        var toIndex = allColumns.indexOf(columnTo);
         if (fromIndex < 0) {
             console.log('ag-Grid: column ' + columnFrom.getId() + ' is not visible');
             return null;
@@ -231,7 +232,7 @@ var RangeController = (function () {
         var lastIndex = Math.max(fromIndex, toIndex);
         var columns = [];
         for (var i = firstIndex; i <= lastIndex; i++) {
-            columns.push(allDisplayedColumns[i]);
+            columns.push(allColumns[i]);
         }
         return columns;
     };
@@ -282,5 +283,5 @@ var RangeController = (function () {
         __metadata('design:paramtypes', [])
     ], RangeController);
     return RangeController;
-})();
+}());
 exports.RangeController = RangeController;

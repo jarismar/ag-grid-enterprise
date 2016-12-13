@@ -1,4 +1,5 @@
 // ag-grid-enterprise v7.0.2
+"use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -178,6 +179,10 @@ var ClipboardService = (function () {
         }
         var data = '';
         var cellsToFlash = {};
+        var dataObj = {
+            headings: [],
+            rows: []
+        };
         // adds columns to the data
         var columnCallback = function (columns) {
             if (!includeHeaders) {
@@ -189,13 +194,18 @@ var ClipboardService = (function () {
                     data += '\t';
                 }
                 if (main_1.Utils.exists(value)) {
+                    dataObj.headings.push(value);
                     data += value;
+                }
+                else {
+                    dataObj.headings.push('');
                 }
             });
             data += '\r\n';
         };
         // adds cell values to the data
         var rowCallback = function (currentRow, rowNode, columns) {
+            var row = [];
             columns.forEach(function (column, index) {
                 var value = _this.valueService.getValue(column, rowNode);
                 var processedValue = _this.processRangeCell(rowNode, column, value, _this.gridOptionsWrapper.getProcessCellForClipboardFunc());
@@ -203,15 +213,20 @@ var ClipboardService = (function () {
                     data += '\t';
                 }
                 if (main_1.Utils.exists(processedValue)) {
+                    row.push(processedValue);
                     data += processedValue;
+                }
+                else {
+                    row.push('');
                 }
                 var cellId = new main_1.GridCell(currentRow.rowIndex, currentRow.floating, column).createId();
                 cellsToFlash[cellId] = true;
             });
+            dataObj.rows.push(row);
             data += '\r\n';
         };
         this.iterateActiveRanges(false, rowCallback, columnCallback);
-        this.copyDataToClipboard(data);
+        this.copyDataToClipboard(data, dataObj);
         this.eventService.dispatchEvent(main_1.Events.EVENT_FLASH_CELLS, { cells: cellsToFlash });
     };
     ClipboardService.prototype.processRangeCell = function (rowNode, column, value, func) {
@@ -253,11 +268,54 @@ var ClipboardService = (function () {
         var data = this.csvCreator.getDataAsCsv(params);
         this.copyDataToClipboard(data);
     };
-    ClipboardService.prototype.copyDataToClipboard = function (data) {
+    ClipboardService.prototype.htmlFormatter = function (dataObj) {
+        var table = document.createElement('table');
+        var thead = table.createTHead();
+        var tbody = table.createTBody();
+        var borderStyle = 'solid 1px black';
+        table.cellSpacing = '0';
+        if (dataObj.headings.length > 0) {
+            var tr_1 = thead.insertRow(0);
+            dataObj.headings.forEach(function (heading, index) {
+                var td = tr_1.insertCell(index);
+                td.innerText = heading;
+                td.style.padding = '4px';
+                td.style.fontWeight = 'bold';
+                td.style.borderBottom = borderStyle;
+            });
+        }
+        dataObj.rows.forEach(function (row, rowIndex) {
+            var tr = tbody.insertRow(rowIndex);
+            row.forEach(function (cellText, cellIndex) {
+                var td = tr.insertCell(cellIndex);
+                td.innerText = cellText;
+                td.style.padding = '4px';
+                td.style.borderBottom = borderStyle;
+                if (rowIndex === 0 && dataObj.headings.length === 0) {
+                    td.style.borderTop = borderStyle;
+                }
+            });
+        });
+        return new XMLSerializer().serializeToString(table);
+    };
+    ClipboardService.prototype.copyDataToClipboard = function (data, dataObj) {
+        var _this = this;
         this.executeOnTempElement(function (element) {
             element.value = data;
             element.select();
             element.focus();
+            element.addEventListener('copy', function (event) {
+                event.clipboardData.clearData('text/plain');
+                event.clipboardData.clearData('text/html');
+                event.clipboardData.setData('text/plain', data);
+                var hasMoreThanOneCell = dataObj && (dataObj.headings.length > 0 ||
+                    dataObj.rows.length > 1 ||
+                    (dataObj.rows.length > 0 && dataObj.rows[0].length > 1));
+                if (hasMoreThanOneCell) {
+                    event.clipboardData.setData('text/html', _this.htmlFormatter(dataObj));
+                }
+                event.preventDefault();
+            });
             return document.execCommand('copy');
         });
     };
@@ -410,5 +468,5 @@ var ClipboardService = (function () {
         __metadata('design:paramtypes', [])
     ], ClipboardService);
     return ClipboardService;
-})();
+}());
 exports.ClipboardService = ClipboardService;
