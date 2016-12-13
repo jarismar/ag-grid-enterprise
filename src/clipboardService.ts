@@ -242,6 +242,10 @@ export class ClipboardService implements IClipboardService {
 
         var data = '';
         var cellsToFlash = <any>{};
+        const dataObj = {
+            headings: [],
+            rows:[]
+        };
 
         // adds columns to the data
         var columnCallback = (columns: Column[]) => {
@@ -253,14 +257,19 @@ export class ClipboardService implements IClipboardService {
                     data += '\t';
                 }
                 if (Utils.exists(value)) {
+                    dataObj.headings.push(value);
                     data += value;
+                } else {
+                    dataObj.headings.push('');
                 }
             });
+
             data += '\r\n';
         };
 
         // adds cell values to the data
         var rowCallback = (currentRow: GridRow, rowNode: RowNode, columns: Column[]) => {
+            const row = [];
             columns.forEach( (column, index) => {
                 var value = this.valueService.getValue(column, rowNode);
 
@@ -270,16 +279,21 @@ export class ClipboardService implements IClipboardService {
                     data += '\t';
                 }
                 if (Utils.exists(processedValue)) {
+                    row.push(processedValue);
                     data += processedValue;
+                } else {
+                    row.push('');
                 }
                 var cellId = new GridCell(currentRow.rowIndex, currentRow.floating, column).createId();
                 cellsToFlash[cellId] = true;
             });
+
+            dataObj.rows.push(row);
             data += '\r\n';
         };
 
         this.iterateActiveRanges(false, rowCallback, columnCallback);
-        this.copyDataToClipboard(data);
+        this.copyDataToClipboard(data, dataObj);
         this.eventService.dispatchEvent(Events.EVENT_FLASH_CELLS, {cells: cellsToFlash});
     }
 
@@ -327,11 +341,56 @@ export class ClipboardService implements IClipboardService {
         this.copyDataToClipboard(data);
     }
 
-    private copyDataToClipboard(data: string): void {
+    private htmlFormatter(dataObj?: any): string {
+        const table = document.createElement('table');
+        const thead = table.createTHead();
+        const tbody = table.createTBody();
+
+        table.cellSpacing = '0';
+
+        if (dataObj.headings.length > 0) {
+            const tr = thead.insertRow(0);
+            dataObj.headings.forEach((heading: string, index: number) => {
+                const td = tr.insertCell(index);
+                td.innerText = heading;
+                td.style.padding = '4px';
+                td.style.fontWeight = 'bold';
+                td.style.borderBottom = 'solid 1px black';
+            });
+        }
+
+        dataObj.rows.forEach((row: any, rowIndex: number) => {
+            const tr = tbody.insertRow(rowIndex);
+            row.forEach((cellText: string, cellIndex: number) => {
+                const td = tr.insertCell(cellIndex);
+                td.innerText = cellText;
+                td.style.padding = '4px';
+                td.style.borderBottom = 'solid 1px black';
+            });
+        });
+
+        return new XMLSerializer().serializeToString(table);
+    }
+
+    private copyDataToClipboard(data: string, dataObj?: any): void {
         this.executeOnTempElement( (element: HTMLTextAreaElement)=> {
             element.value = data;
             element.select();
             element.focus();
+
+            element.addEventListener('copy', (event) => {
+                event.clipboardData.clearData('text/plain');
+                event.clipboardData.clearData('text/html');
+
+                event.clipboardData.setData('text/plain', data);
+
+                if (dataObj && dataObj.rows.length > 0) {
+                    event.clipboardData.setData('text/html', this.htmlFormatter(dataObj));
+                }
+
+                event.preventDefault();
+            });
+
             return document.execCommand('copy');
         });
     }
