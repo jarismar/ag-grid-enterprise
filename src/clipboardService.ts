@@ -345,6 +345,7 @@ export class ClipboardService implements IClipboardService {
         const table = document.createElement('table');
         const thead = table.createTHead();
         const tbody = table.createTBody();
+        const borderStyle = 'solid 1px black';
 
         table.cellSpacing = '0';
 
@@ -355,17 +356,21 @@ export class ClipboardService implements IClipboardService {
                 td.innerText = heading;
                 td.style.padding = '4px';
                 td.style.fontWeight = 'bold';
-                td.style.borderBottom = 'solid 1px black';
+                td.style.borderBottom = borderStyle;
             });
         }
 
         dataObj.rows.forEach((row: any, rowIndex: number) => {
             const tr = tbody.insertRow(rowIndex);
+
             row.forEach((cellText: string, cellIndex: number) => {
                 const td = tr.insertCell(cellIndex);
                 td.innerText = cellText;
                 td.style.padding = '4px';
-                td.style.borderBottom = 'solid 1px black';
+                td.style.borderBottom = borderStyle;
+                if (rowIndex === 0 && dataObj.headings.length === 0) {
+                    td.style.borderTop = borderStyle;
+                }
             });
         });
 
@@ -384,7 +389,12 @@ export class ClipboardService implements IClipboardService {
 
                 event.clipboardData.setData('text/plain', data);
 
-                if (dataObj && dataObj.rows.length > 0) {
+                const hasMoreThanOneCell = dataObj && (
+                    dataObj.headings.length > 0 ||
+                    dataObj.rows.length > 1 ||
+                    (dataObj.rows.length > 0 && dataObj.rows[0].length > 1));
+
+                if (hasMoreThanOneCell) {
                     event.clipboardData.setData('text/html', this.htmlFormatter(dataObj));
                 }
 
