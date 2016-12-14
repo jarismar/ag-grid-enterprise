@@ -243,6 +243,7 @@ export class ClipboardService implements IClipboardService {
         var data = '';
         var cellsToFlash = <any>{};
         const dataObj = {
+            colDefs: [],
             headings: [],
             rows:[]
         };
@@ -278,6 +279,11 @@ export class ClipboardService implements IClipboardService {
                 if (index != 0) {
                     data += '\t';
                 }
+
+                if (dataObj.rows.length === 0) {
+                    dataObj.colDefs.push(column);
+                }
+
                 if (Utils.exists(processedValue)) {
                     row.push(processedValue);
                     data += processedValue;
@@ -345,31 +351,49 @@ export class ClipboardService implements IClipboardService {
         const table = document.createElement('table');
         const thead = table.createTHead();
         const tbody = table.createTBody();
-        const borderStyle = 'solid 1px black';
+        const borderStyle = 'solid 1px #a9a9a9';
+        const fontStyle = 'Helvetica Neue, Helvetica, Arial, sans-serif';
 
         table.cellSpacing = '0';
+        table.style.borderCollapse = 'collapse';
 
         if (dataObj.headings.length > 0) {
             const tr = thead.insertRow(0);
             dataObj.headings.forEach((heading: string, index: number) => {
                 const td = tr.insertCell(index);
                 td.innerText = heading;
-                td.style.padding = '4px';
+                td.style.color = '#666';
+                td.style.backgroundColor = '#eee';
+                td.style.padding = '4px 8px';
                 td.style.fontWeight = 'bold';
-                td.style.borderBottom = borderStyle;
+                td.style.fontFamily = fontStyle;
+                td.style.fontSize = '11px';
+                td.style.border = borderStyle;
+
+                if (dataObj.colDefs[index].getFilter() === 'number') {
+                    td.style.textAlign = 'right';
+                } else {
+                    td.style.textAlign = 'center';
+                }
             });
         }
 
         dataObj.rows.forEach((row: any, rowIndex: number) => {
             const tr = tbody.insertRow(rowIndex);
 
-            row.forEach((cellText: string, cellIndex: number) => {
+            row.forEach((cellValue: any, cellIndex: number) => {
                 const td = tr.insertCell(cellIndex);
-                td.innerText = cellText;
-                td.style.padding = '4px';
-                td.style.borderBottom = borderStyle;
-                if (rowIndex === 0 && dataObj.headings.length === 0) {
-                    td.style.borderTop = borderStyle;
+                td.innerText = cellValue;
+                td.style.color = '#666';
+                td.style.padding = '4px 8px';
+                td.style.fontFamily = fontStyle;
+                td.style.fontSize = '11px';
+                td.style.border = borderStyle;
+
+                if (dataObj.colDefs[cellIndex].getFilter() === 'number') {
+                    td.style.textAlign = 'right';
+                } else {
+                    td.style.textAlign = 'left';
                 }
             });
         });
