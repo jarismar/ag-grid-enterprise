@@ -327,14 +327,20 @@ var ClipboardService = (function () {
             element.select();
             element.focus();
             element.addEventListener('copy', function (event) {
-                event.clipboardData.clearData('text/plain');
-                event.clipboardData.clearData('text/html');
-                event.clipboardData.setData('text/plain', data);
+                if (data) {
+                    event.clipboardData.setData('text/plain', data);
+                }
+                else {
+                    event.clipboardData.clearData('text/plain');
+                }
                 var hasMoreThanOneCell = dataObj && (dataObj.headings.length > 0 ||
                     dataObj.rows.length > 1 ||
                     (dataObj.rows.length > 0 && dataObj.rows[0].length > 1));
                 if (hasMoreThanOneCell) {
                     event.clipboardData.setData('text/html', _this.htmlFormatter(dataObj));
+                }
+                else {
+                    event.clipboardData.clearData('text/html');
                 }
                 event.preventDefault();
             });
