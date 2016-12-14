@@ -408,11 +408,12 @@ export class ClipboardService implements IClipboardService {
             element.focus();
 
             element.addEventListener('copy', (event) => {
-                event.clipboardData.clearData('text/plain');
-                event.clipboardData.clearData('text/html');
-
-                event.clipboardData.setData('text/plain', data);
-
+                if (data) {
+                    event.clipboardData.setData('text/plain', data);
+                } else {
+                    event.clipboardData.clearData('text/plain');
+                }
+                
                 const hasMoreThanOneCell = dataObj && (
                     dataObj.headings.length > 0 ||
                     dataObj.rows.length > 1 ||
@@ -420,6 +421,8 @@ export class ClipboardService implements IClipboardService {
 
                 if (hasMoreThanOneCell) {
                     event.clipboardData.setData('text/html', this.htmlFormatter(dataObj));
+                } else {
+                    event.clipboardData.clearData('text/html');
                 }
 
                 event.preventDefault();
