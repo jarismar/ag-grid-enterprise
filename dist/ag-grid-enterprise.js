@@ -24184,6 +24184,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var data = '';
 	        var cellsToFlash = {};
 	        var dataObj = {
+	            colDefs: [],
 	            headings: [],
 	            rows: []
 	        };
@@ -24215,6 +24216,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	                var processedValue = _this.processRangeCell(rowNode, column, value, _this.gridOptionsWrapper.getProcessCellForClipboardFunc());
 	                if (index != 0) {
 	                    data += '\t';
+	                }
+	                if (dataObj.rows.length === 0) {
+	                    dataObj.colDefs.push(column);
 	                }
 	                if (main_1.Utils.exists(processedValue)) {
 	                    row.push(processedValue);
@@ -24276,27 +24280,45 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var table = document.createElement('table');
 	        var thead = table.createTHead();
 	        var tbody = table.createTBody();
-	        var borderStyle = 'solid 1px black';
+	        var borderStyle = 'solid 1px #a9a9a9';
+	        var fontStyle = 'Helvetica Neue, Helvetica, Arial, sans-serif';
 	        table.cellSpacing = '0';
+	        table.style.borderCollapse = 'collapse';
 	        if (dataObj.headings.length > 0) {
 	            var tr_1 = thead.insertRow(0);
 	            dataObj.headings.forEach(function (heading, index) {
 	                var td = tr_1.insertCell(index);
 	                td.innerText = heading;
-	                td.style.padding = '4px';
+	                td.style.color = '#666';
+	                td.style.backgroundColor = '#eee';
+	                td.style.padding = '4px 8px';
 	                td.style.fontWeight = 'bold';
-	                td.style.borderBottom = borderStyle;
+	                td.style.fontFamily = fontStyle;
+	                td.style.fontSize = '11px';
+	                td.style.border = borderStyle;
+	                if (dataObj.colDefs[index].getFilter() === 'number') {
+	                    td.style.textAlign = 'right';
+	                }
+	                else {
+	                    td.style.textAlign = 'center';
+	                }
 	            });
 	        }
 	        dataObj.rows.forEach(function (row, rowIndex) {
 	            var tr = tbody.insertRow(rowIndex);
-	            row.forEach(function (cellText, cellIndex) {
+	            row.forEach(function (cellValue, cellIndex) {
 	                var td = tr.insertCell(cellIndex);
-	                td.innerText = cellText;
-	                td.style.padding = '4px';
-	                td.style.borderBottom = borderStyle;
-	                if (rowIndex === 0 && dataObj.headings.length === 0) {
-	                    td.style.borderTop = borderStyle;
+	                td.innerText = cellValue;
+	                td.style.color = '#666';
+	                td.style.padding = '4px 8px';
+	                td.style.fontFamily = fontStyle;
+	                td.style.fontSize = '11px';
+	                td.style.border = borderStyle;
+	                if (dataObj.colDefs[cellIndex].getFilter() === 'number') {
+	                    td.style.textAlign = 'right';
+	                }
+	                else {
+	                    td.style.textAlign = 'left';
 	                }
 	            });
 	        });
