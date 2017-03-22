@@ -1,4 +1,4 @@
-// ag-grid-enterprise v7.0.2
+// ag-grid-enterprise v8.2.0
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -18,16 +18,19 @@ var svgFactory = ag_grid_1.SvgFactory.getInstance();
 var EnterpriseMenuFactory = (function () {
     function EnterpriseMenuFactory() {
     }
-    EnterpriseMenuFactory.prototype.showMenuAfterMouseEvent = function (column, mouseEvent) {
+    EnterpriseMenuFactory.prototype.showMenuAfterMouseEvent = function (column, mouseEvent, defaultTab) {
         var _this = this;
         this.showMenu(column, function (menu) {
             _this.popupService.positionPopupUnderMouseEvent({
                 mouseEvent: mouseEvent,
                 ePopup: menu.getGui()
             });
-        });
+            if (defaultTab) {
+                menu.showTab(defaultTab);
+            }
+        }, defaultTab);
     };
-    EnterpriseMenuFactory.prototype.showMenuAfterButtonClick = function (column, eventSource) {
+    EnterpriseMenuFactory.prototype.showMenuAfterButtonClick = function (column, eventSource, defaultTab) {
         var _this = this;
         this.showMenu(column, function (menu) {
             _this.popupService.positionPopupUnderComponent({ eventSource: eventSource,
@@ -37,9 +40,12 @@ var EnterpriseMenuFactory = (function () {
                 minWidth: menu.getMinWidth(),
                 keepWithinBounds: true
             });
-        });
+            if (defaultTab) {
+                menu.showTab(defaultTab);
+            }
+        }, defaultTab);
     };
-    EnterpriseMenuFactory.prototype.showMenu = function (column, positionCallback) {
+    EnterpriseMenuFactory.prototype.showMenu = function (column, positionCallback, defaultTab) {
         var _this = this;
         var menu = new EnterpriseMenu(column, this.lastSelectedTab);
         this.context.wireBean(menu);
@@ -51,6 +57,9 @@ var EnterpriseMenuFactory = (function () {
         menu.afterGuiAttached({
             hidePopup: hidePopup
         });
+        if (!defaultTab) {
+            menu.showTabBasedOnPreviousSelection();
+        }
         menu.addEventListener(EnterpriseMenu.EVENT_TAB_SELECTED, function (event) {
             _this.lastSelectedTab = event.key;
         });
@@ -61,24 +70,23 @@ var EnterpriseMenuFactory = (function () {
         var showFilterPanel = !this.gridOptionsWrapper.isSuppressMenuFilterPanel() && column.isFilterAllowed();
         return showColumnPanel || showMainPanel || showFilterPanel;
     };
-    __decorate([
-        ag_grid_1.Autowired('context'), 
-        __metadata('design:type', ag_grid_1.Context)
-    ], EnterpriseMenuFactory.prototype, "context", void 0);
-    __decorate([
-        ag_grid_1.Autowired('popupService'), 
-        __metadata('design:type', ag_grid_1.PopupService)
-    ], EnterpriseMenuFactory.prototype, "popupService", void 0);
-    __decorate([
-        ag_grid_1.Autowired('gridOptionsWrapper'), 
-        __metadata('design:type', ag_grid_1.GridOptionsWrapper)
-    ], EnterpriseMenuFactory.prototype, "gridOptionsWrapper", void 0);
-    EnterpriseMenuFactory = __decorate([
-        ag_grid_1.Bean('menuFactory'), 
-        __metadata('design:paramtypes', [])
-    ], EnterpriseMenuFactory);
     return EnterpriseMenuFactory;
 }());
+__decorate([
+    ag_grid_1.Autowired('context'),
+    __metadata("design:type", ag_grid_1.Context)
+], EnterpriseMenuFactory.prototype, "context", void 0);
+__decorate([
+    ag_grid_1.Autowired('popupService'),
+    __metadata("design:type", ag_grid_1.PopupService)
+], EnterpriseMenuFactory.prototype, "popupService", void 0);
+__decorate([
+    ag_grid_1.Autowired('gridOptionsWrapper'),
+    __metadata("design:type", ag_grid_1.GridOptionsWrapper)
+], EnterpriseMenuFactory.prototype, "gridOptionsWrapper", void 0);
+EnterpriseMenuFactory = __decorate([
+    ag_grid_1.Bean('menuFactory')
+], EnterpriseMenuFactory);
 exports.EnterpriseMenuFactory = EnterpriseMenuFactory;
 var EnterpriseMenu = (function () {
     function EnterpriseMenu(column, initialSelection) {
@@ -116,13 +124,17 @@ var EnterpriseMenu = (function () {
     };
     EnterpriseMenu.prototype.showTabBasedOnPreviousSelection = function () {
         // show the tab the user was on last time they had a menu open
-        if (this.tabItemColumns && this.initialSelection === EnterpriseMenu.TAB_COLUMNS) {
+        this.showTab(this.initialSelection);
+    };
+    EnterpriseMenu.prototype.showTab = function (toShow) {
+        console.log('showing : ' + toShow + ' - ' + this.tabItemFilter);
+        if (this.tabItemColumns && toShow === EnterpriseMenu.TAB_COLUMNS) {
             this.tabbedLayout.showItem(this.tabItemColumns);
         }
-        else if (this.tabItemFilter && this.initialSelection === EnterpriseMenu.TAB_FILTER) {
+        else if (this.tabItemFilter && toShow === EnterpriseMenu.TAB_FILTER) {
             this.tabbedLayout.showItem(this.tabItemFilter);
         }
-        else if (this.tabItemGeneral && this.initialSelection === EnterpriseMenu.TAB_GENERAL) {
+        else if (this.tabItemGeneral && toShow === EnterpriseMenu.TAB_GENERAL) {
             this.tabbedLayout.showItem(this.tabItemGeneral);
         }
         else {
@@ -261,54 +273,59 @@ var EnterpriseMenu = (function () {
     EnterpriseMenu.prototype.afterGuiAttached = function (params) {
         var _this = this;
         this.tabbedLayout.setAfterAttachedParams({ hidePopup: params.hidePopup });
-        this.showTabBasedOnPreviousSelection();
         this.hidePopupFunc = params.hidePopup;
         // if the body scrolls, we want to hide the menu, as the menu will not appear in the right location anymore
-        this.eventService.addEventListener('bodyScroll', params.hidePopup);
-        this.destroyFunctions.push(function () { return _this.eventService.removeEventListener('bodyScroll', params.hidePopup); });
+        var onBodyScroll = function (event) {
+            // if h scroll, popup is no longer over the column
+            if (event.direction === 'horizontal') {
+                params.hidePopup();
+            }
+        };
+        this.eventService.addEventListener('bodyScroll', onBodyScroll);
+        this.destroyFunctions.push(function () { return _this.eventService.removeEventListener('bodyScroll', onBodyScroll); });
     };
     EnterpriseMenu.prototype.getGui = function () {
         return this.tabbedLayout.getGui();
     };
-    EnterpriseMenu.EVENT_TAB_SELECTED = 'tabSelected';
-    EnterpriseMenu.TAB_FILTER = 'filter';
-    EnterpriseMenu.TAB_GENERAL = 'general';
-    EnterpriseMenu.TAB_COLUMNS = 'columns';
-    EnterpriseMenu.MENU_ITEM_SEPARATOR = 'separator';
-    __decorate([
-        ag_grid_1.Autowired('columnController'), 
-        __metadata('design:type', ag_grid_1.ColumnController)
-    ], EnterpriseMenu.prototype, "columnController", void 0);
-    __decorate([
-        ag_grid_1.Autowired('filterManager'), 
-        __metadata('design:type', ag_grid_1.FilterManager)
-    ], EnterpriseMenu.prototype, "filterManager", void 0);
-    __decorate([
-        ag_grid_1.Autowired('context'), 
-        __metadata('design:type', ag_grid_1.Context)
-    ], EnterpriseMenu.prototype, "context", void 0);
-    __decorate([
-        ag_grid_1.Autowired('gridApi'), 
-        __metadata('design:type', ag_grid_1.GridApi)
-    ], EnterpriseMenu.prototype, "gridApi", void 0);
-    __decorate([
-        ag_grid_1.Autowired('gridOptionsWrapper'), 
-        __metadata('design:type', ag_grid_1.GridOptionsWrapper)
-    ], EnterpriseMenu.prototype, "gridOptionsWrapper", void 0);
-    __decorate([
-        ag_grid_1.Autowired('eventService'), 
-        __metadata('design:type', ag_grid_1.EventService)
-    ], EnterpriseMenu.prototype, "eventService", void 0);
-    __decorate([
-        ag_grid_1.Autowired('menuItemMapper'), 
-        __metadata('design:type', menuItemMapper_1.MenuItemMapper)
-    ], EnterpriseMenu.prototype, "menuItemMapper", void 0);
-    __decorate([
-        ag_grid_1.PostConstruct, 
-        __metadata('design:type', Function), 
-        __metadata('design:paramtypes', []), 
-        __metadata('design:returntype', void 0)
-    ], EnterpriseMenu.prototype, "init", null);
     return EnterpriseMenu;
 }());
+EnterpriseMenu.EVENT_TAB_SELECTED = 'tabSelected';
+EnterpriseMenu.TAB_FILTER = 'filter';
+EnterpriseMenu.TAB_GENERAL = 'general';
+EnterpriseMenu.TAB_COLUMNS = 'columns';
+EnterpriseMenu.MENU_ITEM_SEPARATOR = 'separator';
+__decorate([
+    ag_grid_1.Autowired('columnController'),
+    __metadata("design:type", ag_grid_1.ColumnController)
+], EnterpriseMenu.prototype, "columnController", void 0);
+__decorate([
+    ag_grid_1.Autowired('filterManager'),
+    __metadata("design:type", ag_grid_1.FilterManager)
+], EnterpriseMenu.prototype, "filterManager", void 0);
+__decorate([
+    ag_grid_1.Autowired('context'),
+    __metadata("design:type", ag_grid_1.Context)
+], EnterpriseMenu.prototype, "context", void 0);
+__decorate([
+    ag_grid_1.Autowired('gridApi'),
+    __metadata("design:type", ag_grid_1.GridApi)
+], EnterpriseMenu.prototype, "gridApi", void 0);
+__decorate([
+    ag_grid_1.Autowired('gridOptionsWrapper'),
+    __metadata("design:type", ag_grid_1.GridOptionsWrapper)
+], EnterpriseMenu.prototype, "gridOptionsWrapper", void 0);
+__decorate([
+    ag_grid_1.Autowired('eventService'),
+    __metadata("design:type", ag_grid_1.EventService)
+], EnterpriseMenu.prototype, "eventService", void 0);
+__decorate([
+    ag_grid_1.Autowired('menuItemMapper'),
+    __metadata("design:type", menuItemMapper_1.MenuItemMapper)
+], EnterpriseMenu.prototype, "menuItemMapper", void 0);
+__decorate([
+    ag_grid_1.PostConstruct,
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], EnterpriseMenu.prototype, "init", null);
 exports.EnterpriseMenu = EnterpriseMenu;

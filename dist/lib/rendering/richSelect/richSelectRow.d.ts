@@ -1,10 +1,10 @@
-// ag-grid-enterprise v7.0.2
-import { Component, CellRendererService, ICellRendererFunc, ICellRenderer } from "ag-grid/main";
+// ag-grid-enterprise v8.2.0
+import { Component, CellRendererService, ICellRendererFunc, ICellRendererComp } from "ag-grid/main";
 export declare class RichSelectRow extends Component {
     cellRendererService: CellRendererService;
     private cellRenderer;
     constructor(cellRenderer: {
-        new (): ICellRenderer;
+        new (): ICellRendererComp;
     } | ICellRendererFunc | string);
     setState(value: any, selected: boolean): void;
     private populateWithoutRenderer(value);

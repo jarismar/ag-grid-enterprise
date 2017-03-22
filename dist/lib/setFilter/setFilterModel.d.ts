@@ -1,4 +1,4 @@
-// ag-grid-enterprise v7.0.2
+// ag-grid-enterprise v8.2.0
 import { ColDef } from "ag-grid/main";
 export declare class SetFilterModel {
     private colDef;
@@ -28,6 +28,9 @@ export declare class SetFilterModel {
     getDisplayedValueCount(): number;
     getDisplayedValue(index: any): any;
     selectEverything(): void;
+    private selectOn(toSelectOn);
+    private valueToKey(key);
+    private keyToValue(value);
     isFilterActive(): boolean;
     selectNothing(): void;
     getUniqueValueCount(): number;
@@ -37,6 +40,6 @@ export declare class SetFilterModel {
     isValueSelected(value: any): boolean;
     isEverythingSelected(): boolean;
     isNothingSelected(): boolean;
-    getModel(): any;
-    setModel(model: any, isSelectAll?: boolean): void;
+    getModel(): string[];
+    setModel(model: string[], isSelectAll?: boolean): void;
 }

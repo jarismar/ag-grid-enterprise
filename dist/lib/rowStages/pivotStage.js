@@ -1,4 +1,4 @@
-// ag-grid-enterprise v7.0.2
+// ag-grid-enterprise v8.2.0
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -15,7 +15,8 @@ var PivotStage = (function () {
     function PivotStage() {
         this.uniqueValues = {};
     }
-    PivotStage.prototype.execute = function (rootNode) {
+    PivotStage.prototype.execute = function (params) {
+        var rootNode = params.rowNode;
         if (this.columnController.isPivotActive()) {
             this.executePivotOn(rootNode);
         }
@@ -116,30 +117,29 @@ var PivotStage = (function () {
     PivotStage.prototype.getPivotColumnDefs = function () {
         return this.pivotColumnDefs;
     };
-    __decorate([
-        main_1.Autowired('rowModel'), 
-        __metadata('design:type', Object)
-    ], PivotStage.prototype, "rowModel", void 0);
-    __decorate([
-        main_1.Autowired('valueService'), 
-        __metadata('design:type', main_1.ValueService)
-    ], PivotStage.prototype, "valueService", void 0);
-    __decorate([
-        main_1.Autowired('columnController'), 
-        __metadata('design:type', main_1.ColumnController)
-    ], PivotStage.prototype, "columnController", void 0);
-    __decorate([
-        main_1.Autowired('eventService'), 
-        __metadata('design:type', main_1.EventService)
-    ], PivotStage.prototype, "eventService", void 0);
-    __decorate([
-        main_1.Autowired('pivotColDefService'), 
-        __metadata('design:type', pivotColDefService_1.PivotColDefService)
-    ], PivotStage.prototype, "pivotColDefService", void 0);
-    PivotStage = __decorate([
-        main_1.Bean('pivotStage'), 
-        __metadata('design:paramtypes', [])
-    ], PivotStage);
     return PivotStage;
 }());
+__decorate([
+    main_1.Autowired('rowModel'),
+    __metadata("design:type", Object)
+], PivotStage.prototype, "rowModel", void 0);
+__decorate([
+    main_1.Autowired('valueService'),
+    __metadata("design:type", main_1.ValueService)
+], PivotStage.prototype, "valueService", void 0);
+__decorate([
+    main_1.Autowired('columnController'),
+    __metadata("design:type", main_1.ColumnController)
+], PivotStage.prototype, "columnController", void 0);
+__decorate([
+    main_1.Autowired('eventService'),
+    __metadata("design:type", main_1.EventService)
+], PivotStage.prototype, "eventService", void 0);
+__decorate([
+    main_1.Autowired('pivotColDefService'),
+    __metadata("design:type", pivotColDefService_1.PivotColDefService)
+], PivotStage.prototype, "pivotColDefService", void 0);
+PivotStage = __decorate([
+    main_1.Bean('pivotStage')
+], PivotStage);
 exports.PivotStage = PivotStage;

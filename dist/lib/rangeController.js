@@ -1,4 +1,4 @@
-// ag-grid-enterprise v7.0.2
+// ag-grid-enterprise v8.2.0
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -33,9 +33,10 @@ var RangeController = (function () {
         if (!columns) {
             return;
         }
+        var gridCellDef = { rowIndex: cell.rowIndex, floating: cell.floating, column: cell.column };
         var newRange = {
-            start: new main_1.GridCell(cell.rowIndex, cell.floating, cell.column),
-            end: new main_1.GridCell(cell.rowIndex, cell.floating, cell.column),
+            start: new main_1.GridCell(gridCellDef),
+            end: new main_1.GridCell(gridCellDef),
             columns: columns
         };
         this.cellRanges = [];
@@ -63,9 +64,11 @@ var RangeController = (function () {
         if (!columns) {
             return;
         }
+        var startGridCellDef = { column: columnStart, rowIndex: rangeSelection.rowStart, floating: rangeSelection.floatingStart };
+        var endGridCellDef = { column: columnEnd, rowIndex: rangeSelection.rowEnd, floating: rangeSelection.floatingEnd };
         var newRange = {
-            start: new main_1.GridCell(rangeSelection.rowStart, rangeSelection.floatingStart, columnStart),
-            end: new main_1.GridCell(rangeSelection.rowEnd, rangeSelection.floatingEnd, columnEnd),
+            start: new main_1.GridCell(startGridCellDef),
+            end: new main_1.GridCell(endGridCellDef),
             columns: columns
         };
         if (!this.cellRanges) {
@@ -169,9 +172,10 @@ var RangeController = (function () {
         this.selectionChanged(false, true);
     };
     RangeController.prototype.createNewActiveRange = function (cell) {
+        var gridCellDef = { column: cell.column, rowIndex: cell.rowIndex, floating: cell.floating };
         this.activeRange = {
-            start: new main_1.GridCell(cell.rowIndex, cell.floating, cell.column),
-            end: new main_1.GridCell(cell.rowIndex, cell.floating, cell.column),
+            start: new main_1.GridCell(gridCellDef),
+            end: new main_1.GridCell(gridCellDef),
             columns: [cell.column]
         };
         this.cellRanges.push(this.activeRange);
@@ -236,52 +240,51 @@ var RangeController = (function () {
         }
         return columns;
     };
-    __decorate([
-        main_1.Autowired('loggerFactory'), 
-        __metadata('design:type', main_1.LoggerFactory)
-    ], RangeController.prototype, "loggerFactory", void 0);
-    __decorate([
-        main_1.Autowired('gridPanel'), 
-        __metadata('design:type', main_1.GridPanel)
-    ], RangeController.prototype, "gridPanel", void 0);
-    __decorate([
-        main_1.Autowired('rowModel'), 
-        __metadata('design:type', Object)
-    ], RangeController.prototype, "rowModel", void 0);
-    __decorate([
-        main_1.Autowired('eventService'), 
-        __metadata('design:type', main_1.EventService)
-    ], RangeController.prototype, "eventService", void 0);
-    __decorate([
-        main_1.Autowired('columnController'), 
-        __metadata('design:type', main_1.ColumnController)
-    ], RangeController.prototype, "columnController", void 0);
-    __decorate([
-        main_1.Autowired('rowRenderer'), 
-        __metadata('design:type', main_1.RowRenderer)
-    ], RangeController.prototype, "rowRenderer", void 0);
-    __decorate([
-        main_1.Autowired('focusedCellController'), 
-        __metadata('design:type', main_1.FocusedCellController)
-    ], RangeController.prototype, "focusedCellController", void 0);
-    __decorate([
-        main_1.Autowired('mouseEventService'), 
-        __metadata('design:type', main_1.MouseEventService)
-    ], RangeController.prototype, "mouseEventService", void 0);
-    __decorate([
-        main_1.Autowired('gridOptionsWrapper'), 
-        __metadata('design:type', main_1.GridOptionsWrapper)
-    ], RangeController.prototype, "gridOptionsWrapper", void 0);
-    __decorate([
-        main_1.PostConstruct, 
-        __metadata('design:type', Function), 
-        __metadata('design:paramtypes', []), 
-        __metadata('design:returntype', void 0)
-    ], RangeController.prototype, "init", null);
-    RangeController = __decorate([
-        main_1.Bean('rangeController'), 
-        __metadata('design:paramtypes', [])
-    ], RangeController);
     return RangeController;
 }());
+__decorate([
+    main_1.Autowired('loggerFactory'),
+    __metadata("design:type", main_1.LoggerFactory)
+], RangeController.prototype, "loggerFactory", void 0);
+__decorate([
+    main_1.Autowired('gridPanel'),
+    __metadata("design:type", main_1.GridPanel)
+], RangeController.prototype, "gridPanel", void 0);
+__decorate([
+    main_1.Autowired('rowModel'),
+    __metadata("design:type", Object)
+], RangeController.prototype, "rowModel", void 0);
+__decorate([
+    main_1.Autowired('eventService'),
+    __metadata("design:type", main_1.EventService)
+], RangeController.prototype, "eventService", void 0);
+__decorate([
+    main_1.Autowired('columnController'),
+    __metadata("design:type", main_1.ColumnController)
+], RangeController.prototype, "columnController", void 0);
+__decorate([
+    main_1.Autowired('rowRenderer'),
+    __metadata("design:type", main_1.RowRenderer)
+], RangeController.prototype, "rowRenderer", void 0);
+__decorate([
+    main_1.Autowired('focusedCellController'),
+    __metadata("design:type", main_1.FocusedCellController)
+], RangeController.prototype, "focusedCellController", void 0);
+__decorate([
+    main_1.Autowired('mouseEventService'),
+    __metadata("design:type", main_1.MouseEventService)
+], RangeController.prototype, "mouseEventService", void 0);
+__decorate([
+    main_1.Autowired('gridOptionsWrapper'),
+    __metadata("design:type", main_1.GridOptionsWrapper)
+], RangeController.prototype, "gridOptionsWrapper", void 0);
+__decorate([
+    main_1.PostConstruct,
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], RangeController.prototype, "init", null);
+RangeController = __decorate([
+    main_1.Bean('rangeController')
+], RangeController);
 exports.RangeController = RangeController;

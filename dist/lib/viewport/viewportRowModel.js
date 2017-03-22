@@ -1,4 +1,4 @@
-// ag-grid-enterprise v7.0.2
+// ag-grid-enterprise v8.2.0
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -169,47 +169,50 @@ var ViewportRowModel = (function () {
             this.eventService.dispatchEvent(main_1.Events.EVENT_MODEL_UPDATED);
         }
     };
-    ViewportRowModel.prototype.insertItemsAtIndex = function (index, items) {
+    ViewportRowModel.prototype.insertItemsAtIndex = function (index, items, skipRefresh) {
         console.log('not yet supported');
     };
-    ViewportRowModel.prototype.removeItems = function (rowNodes) {
+    ViewportRowModel.prototype.removeItems = function (rowNodes, skipRefresh) {
         console.log('not yet supported');
     };
-    ViewportRowModel.prototype.addItems = function (item) {
+    ViewportRowModel.prototype.addItems = function (item, skipRefresh) {
         console.log('not yet supported');
     };
-    __decorate([
-        main_1.Autowired('gridOptionsWrapper'), 
-        __metadata('design:type', main_1.GridOptionsWrapper)
-    ], ViewportRowModel.prototype, "gridOptionsWrapper", void 0);
-    __decorate([
-        main_1.Autowired('eventService'), 
-        __metadata('design:type', main_1.EventService)
-    ], ViewportRowModel.prototype, "eventService", void 0);
-    __decorate([
-        main_1.Autowired('selectionController'), 
-        __metadata('design:type', main_1.SelectionController)
-    ], ViewportRowModel.prototype, "selectionController", void 0);
-    __decorate([
-        main_1.Autowired('context'), 
-        __metadata('design:type', main_1.Context)
-    ], ViewportRowModel.prototype, "context", void 0);
-    __decorate([
-        main_1.PostConstruct, 
-        __metadata('design:type', Function), 
-        __metadata('design:paramtypes', []), 
-        __metadata('design:returntype', void 0)
-    ], ViewportRowModel.prototype, "init", null);
-    __decorate([
-        main_1.PreDestroy, 
-        __metadata('design:type', Function), 
-        __metadata('design:paramtypes', []), 
-        __metadata('design:returntype', void 0)
-    ], ViewportRowModel.prototype, "destroy", null);
-    ViewportRowModel = __decorate([
-        main_1.Bean('rowModel'), 
-        __metadata('design:paramtypes', [])
-    ], ViewportRowModel);
+    ViewportRowModel.prototype.isRowPresent = function (rowNode) {
+        console.log('not yet supported');
+        return false;
+    };
     return ViewportRowModel;
 }());
+__decorate([
+    main_1.Autowired('gridOptionsWrapper'),
+    __metadata("design:type", main_1.GridOptionsWrapper)
+], ViewportRowModel.prototype, "gridOptionsWrapper", void 0);
+__decorate([
+    main_1.Autowired('eventService'),
+    __metadata("design:type", main_1.EventService)
+], ViewportRowModel.prototype, "eventService", void 0);
+__decorate([
+    main_1.Autowired('selectionController'),
+    __metadata("design:type", main_1.SelectionController)
+], ViewportRowModel.prototype, "selectionController", void 0);
+__decorate([
+    main_1.Autowired('context'),
+    __metadata("design:type", main_1.Context)
+], ViewportRowModel.prototype, "context", void 0);
+__decorate([
+    main_1.PostConstruct,
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ViewportRowModel.prototype, "init", null);
+__decorate([
+    main_1.PreDestroy,
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ViewportRowModel.prototype, "destroy", null);
+ViewportRowModel = __decorate([
+    main_1.Bean('rowModel')
+], ViewportRowModel);
 exports.ViewportRowModel = ViewportRowModel;

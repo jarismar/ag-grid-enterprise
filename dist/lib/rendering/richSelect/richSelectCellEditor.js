@@ -1,4 +1,4 @@
-// ag-grid-enterprise v7.0.2
+// ag-grid-enterprise v8.2.0
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -20,7 +20,7 @@ var virtualList_1 = require("../virtualList");
 var RichSelectCellEditor = (function (_super) {
     __extends(RichSelectCellEditor, _super);
     function RichSelectCellEditor() {
-        _super.call(this, RichSelectCellEditor.TEMPLATE);
+        return _super.call(this, RichSelectCellEditor.TEMPLATE) || this;
     }
     RichSelectCellEditor.prototype.init = function (params) {
         this.params = params;
@@ -110,7 +110,8 @@ var RichSelectCellEditor = (function (_super) {
         var mouseY = mouseEvent.clientY - rect.top + scrollTop;
         var row = Math.floor(mouseY / this.virtualList.getRowHeight());
         var value = this.params.values[row];
-        if (main_1.Utils.exists(value)) {
+        // not using utils.exist() as want empty string test to pass
+        if (value !== null && value !== undefined) {
             this.setSelectedValue(value);
         }
     };
@@ -139,20 +140,20 @@ var RichSelectCellEditor = (function (_super) {
     RichSelectCellEditor.prototype.isPopup = function () {
         return true;
     };
-    RichSelectCellEditor.TEMPLATE = 
-    // tab index is needed so we can focus, which is needed for keyboard events
-    '<div class="ag-rich-select" tabindex="0">' +
-        '<div class="ag-rich-select-value"></div>' +
-        '<div class="ag-rich-select-list"></div>' +
-        '</div>';
-    __decorate([
-        main_1.Autowired('context'), 
-        __metadata('design:type', main_1.Context)
-    ], RichSelectCellEditor.prototype, "context", void 0);
-    __decorate([
-        main_1.Autowired('cellRendererService'), 
-        __metadata('design:type', main_1.CellRendererService)
-    ], RichSelectCellEditor.prototype, "cellRendererService", void 0);
     return RichSelectCellEditor;
 }(main_1.Component));
+RichSelectCellEditor.TEMPLATE = 
+// tab index is needed so we can focus, which is needed for keyboard events
+'<div class="ag-rich-select" tabindex="0">' +
+    '<div class="ag-rich-select-value"></div>' +
+    '<div class="ag-rich-select-list"></div>' +
+    '</div>';
+__decorate([
+    main_1.Autowired('context'),
+    __metadata("design:type", main_1.Context)
+], RichSelectCellEditor.prototype, "context", void 0);
+__decorate([
+    main_1.Autowired('cellRendererService'),
+    __metadata("design:type", main_1.CellRendererService)
+], RichSelectCellEditor.prototype, "cellRendererService", void 0);
 exports.RichSelectCellEditor = RichSelectCellEditor;

@@ -1,4 +1,4 @@
-// ag-grid-enterprise v7.0.2
+// ag-grid-enterprise v8.2.0
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -10,12 +10,13 @@ var columnComponent_1 = require("./columnComponent");
 var AbstractColumnDropPanel = (function (_super) {
     __extends(AbstractColumnDropPanel, _super);
     function AbstractColumnDropPanel(horizontal, valueColumn, name) {
-        _super.call(this, "<div class=\"ag-column-drop ag-font-style ag-column-drop-" + (horizontal ? 'horizontal' : 'vertical') + " ag-column-drop-" + name + "\"></div>");
-        this.state = AbstractColumnDropPanel.STATE_NOT_DRAGGING;
-        this.guiDestroyFunctions = [];
-        this.childColumnComponents = [];
-        this.horizontal = horizontal;
-        this.valueColumn = valueColumn;
+        var _this = _super.call(this, "<div class=\"ag-column-drop ag-font-style ag-column-drop-" + (horizontal ? 'horizontal' : 'vertical') + " ag-column-drop-" + name + "\"></div>") || this;
+        _this.state = AbstractColumnDropPanel.STATE_NOT_DRAGGING;
+        _this.guiDestroyFunctions = [];
+        _this.childColumnComponents = [];
+        _this.horizontal = horizontal;
+        _this.valueColumn = valueColumn;
+        return _this;
     }
     AbstractColumnDropPanel.prototype.isHorizontal = function () {
         return this.horizontal;
@@ -79,19 +80,15 @@ var AbstractColumnDropPanel = (function (_super) {
         }
         var newIndex = 0;
         var mouseEvent = draggingEvent.event;
+        var enableRtl = this.beans.gridOptionsWrapper.isEnableRtl();
+        var goingLeft = draggingEvent.hDirection === main_1.HDirection.Left;
+        var mouseX = mouseEvent.clientX;
         this.childColumnComponents.forEach(function (childColumn) {
             var rect = childColumn.getGui().getBoundingClientRect();
-            if (draggingEvent.hDirection === main_1.HDirection.Left) {
-                var horizontalFit = mouseEvent.clientX >= rect.right;
-                if (horizontalFit) {
-                    newIndex++;
-                }
-            }
-            else {
-                var horizontalFit = mouseEvent.clientX >= rect.left;
-                if (horizontalFit) {
-                    newIndex++;
-                }
+            var rectX = goingLeft ? rect.right : rect.left;
+            var horizontalFit = enableRtl ? (mouseX <= rectX) : (mouseX >= rectX);
+            if (horizontalFit) {
+                newIndex++;
             }
         });
         return newIndex;
@@ -307,14 +304,20 @@ var AbstractColumnDropPanel = (function (_super) {
     AbstractColumnDropPanel.prototype.addArrowToGui = function () {
         // only add the arrows if the layout is horizontal
         if (this.horizontal) {
+            // for RTL it's a left arrow, otherwise it's a right arrow
+            var enableRtl = this.beans.gridOptionsWrapper.isEnableRtl();
+            var charCode = enableRtl ?
+                AbstractColumnDropPanel.CHAR_LEFT_ARROW : AbstractColumnDropPanel.CHAR_RIGHT_ARROW;
             var eArrow = document.createElement('span');
-            eArrow.innerHTML = '&#8594;';
+            eArrow.innerHTML = charCode;
             this.getGui().appendChild(eArrow);
         }
     };
-    AbstractColumnDropPanel.STATE_NOT_DRAGGING = 'notDragging';
-    AbstractColumnDropPanel.STATE_NEW_COLUMNS_IN = 'newColumnsIn';
-    AbstractColumnDropPanel.STATE_REARRANGE_COLUMNS = 'rearrangeColumns';
     return AbstractColumnDropPanel;
 }(main_1.Component));
+AbstractColumnDropPanel.STATE_NOT_DRAGGING = 'notDragging';
+AbstractColumnDropPanel.STATE_NEW_COLUMNS_IN = 'newColumnsIn';
+AbstractColumnDropPanel.STATE_REARRANGE_COLUMNS = 'rearrangeColumns';
+AbstractColumnDropPanel.CHAR_LEFT_ARROW = '&#8592;';
+AbstractColumnDropPanel.CHAR_RIGHT_ARROW = '&#8594;';
 exports.AbstractColumnDropPanel = AbstractColumnDropPanel;

@@ -210,15 +210,21 @@ export class ViewportRowModel implements IRowModel {
         }
     }
 
-    public insertItemsAtIndex(index: number, items: any[]): void {
+    public insertItemsAtIndex(index: number, items: any[], skipRefresh: boolean): void {
         console.log('not yet supported');
     }
 
-    public removeItems(rowNodes: RowNode[]): void {
+    public removeItems(rowNodes: RowNode[], skipRefresh: boolean): void {
         console.log('not yet supported');
     }
 
-    public addItems(item: any[]): void {
+    public addItems(item: any[], skipRefresh: boolean): void {
         console.log('not yet supported');
     }
+
+    public isRowPresent(rowNode: RowNode): boolean {
+        console.log('not yet supported');
+        return false;
+    }
+
 }

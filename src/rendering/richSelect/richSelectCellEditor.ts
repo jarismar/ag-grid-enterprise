@@ -1,11 +1,11 @@
 
-import {ICellEditor, ICellEditorParams, Component, Autowired, Context, Utils, Constants, ICellRenderer, ICellRendererFunc, CellRendererService} from "ag-grid/main";
+import {ICellEditor, ICellEditorParams, Component, Autowired, Context, Utils, Constants, ICellRendererComp, ICellRendererFunc, CellRendererService} from "ag-grid/main";
 import {RichSelectRow} from "./richSelectRow";
 import {VirtualList} from "../virtualList";
 
 export interface IRichCellEditorParams extends ICellEditorParams {
     values: string[];
-    cellRenderer: {new(): ICellRenderer} | ICellRendererFunc | string;
+    cellRenderer: {new(): ICellRendererComp} | ICellRendererFunc | string;
 }
 
 export class RichSelectCellEditor extends Component implements ICellEditor {
@@ -27,7 +27,7 @@ export class RichSelectCellEditor extends Component implements ICellEditor {
 
     private selectedValue: any;
 
-    private cellRenderer: {new(): ICellRenderer} | ICellRendererFunc | string;
+    private cellRenderer: {new(): ICellRendererComp} | ICellRendererFunc | string;
 
     constructor() {
         super(RichSelectCellEditor.TEMPLATE);
@@ -144,7 +144,8 @@ export class RichSelectCellEditor extends Component implements ICellEditor {
         var row = Math.floor(mouseY / this.virtualList.getRowHeight());
         var value = this.params.values[row];
 
-        if (Utils.exists(value)) {
+        // not using utils.exist() as want empty string test to pass
+        if (value!==null && value!==undefined) {
             this.setSelectedValue(value);
         }
     }

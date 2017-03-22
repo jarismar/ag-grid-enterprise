@@ -1,4 +1,4 @@
-// ag-grid-enterprise v7.0.2
+// ag-grid-enterprise v8.2.0
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -9,23 +9,21 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var main_1 = require('ag-grid/main');
-var main_2 = require('ag-grid/main');
-var md5_1 = require('./license/md5');
-var LicenseManager = (function () {
+var main_1 = require("ag-grid/main");
+var main_2 = require("ag-grid/main");
+var md5_1 = require("./license/md5");
+var LicenseManager = LicenseManager_1 = (function () {
     function LicenseManager() {
     }
     LicenseManager.prototype.validateLicense = function () {
-        var gridReleaseDate = LicenseManager.getGridReleaseDate();
+        var gridReleaseDate = LicenseManager_1.getGridReleaseDate();
         var valid = false;
         var current = false;
-        if (!main_2.Utils.missingOrEmpty(LicenseManager.licenseKey) && LicenseManager.licenseKey.length > 32) {
-            var hashStart = LicenseManager.licenseKey.length - 32;
-            var md5 = LicenseManager.licenseKey.substring(hashStart);
-            var license = LicenseManager.licenseKey.substring(0, hashStart);
+        var expiry = null;
+        if (!main_2.Utils.missingOrEmpty(LicenseManager_1.licenseKey) && LicenseManager_1.licenseKey.length > 32) {
+            var _a = LicenseManager_1.extractLicenseComponents(LicenseManager_1.licenseKey), md5 = _a.md5, license = _a.license;
             if (md5 === this.md5.md5(license)) {
-                var restrictionHashed = license.substring(license.lastIndexOf('_') + 1, license.length);
-                var expiry = new Date(parseInt(LicenseManager.decode(restrictionHashed)));
+                expiry = LicenseManager_1.extractExpiry(license);
                 if (!isNaN(expiry.getTime())) {
                     valid = true;
                     current = (gridReleaseDate < expiry);
@@ -33,14 +31,38 @@ var LicenseManager = (function () {
             }
         }
         if (!valid) {
-            LicenseManager.outputMessage('********************************************* Invalid License **************************************************', '* Your license for ag-Grid Enterprise is not valid - please contact ag-Grid support to obtain a valid license. *');
+            LicenseManager_1.outputMessage('********************************************* Invalid License **************************************************', '* Your license for ag-Grid Enterprise is not valid - please contact accounts@ag-grid.com to obtain a valid license. *');
         }
         else if (!current) {
-            var formattedExpiryDate = LicenseManager.formatDate(expiry);
-            var formattedReleaseDate = LicenseManager.formatDate(gridReleaseDate);
-            LicenseManager.outputMessage('********************* License not compatible with installed version of ag-Grid Enterprise. *********************', ("Your license for ag-Grid Enterprise expired on " + formattedExpiryDate + " but the version installed was released on " + formattedReleaseDate + ". Please ") +
-                'contact ag-Grid Support to renew your license');
+            var formattedExpiryDate = LicenseManager_1.formatDate(expiry);
+            var formattedReleaseDate = LicenseManager_1.formatDate(gridReleaseDate);
+            LicenseManager_1.outputMessage('********************* License not compatible with installed version of ag-Grid Enterprise. *********************', "Your license for ag-Grid Enterprise expired on " + formattedExpiryDate + " but the version installed was released on " + formattedReleaseDate + ". Please " +
+                'contact accounts@ag-grid.com to renew your license');
         }
+    };
+    LicenseManager.extractExpiry = function (license) {
+        var restrictionHashed = license.substring(license.lastIndexOf('_') + 1, license.length);
+        return new Date(parseInt(LicenseManager_1.decode(restrictionHashed)));
+    };
+    LicenseManager.extractLicenseComponents = function (licenseKey) {
+        var hashStart = licenseKey.length - 32;
+        var md5 = licenseKey.substring(hashStart);
+        var license = licenseKey.substring(0, hashStart);
+        return { md5: md5, license: license };
+    };
+    LicenseManager.prototype.getLicenseDetails = function (licenseKey) {
+        var _a = LicenseManager_1.extractLicenseComponents(licenseKey), md5 = _a.md5, license = _a.license;
+        var valid = (md5 === this.md5.md5(license));
+        var expiry;
+        if (valid) {
+            expiry = LicenseManager_1.extractExpiry(license);
+            valid = !isNaN(expiry.getTime());
+        }
+        return {
+            licenseKey: licenseKey,
+            valid: valid,
+            expiry: valid ? LicenseManager_1.formatDate(expiry) : null
+        };
     };
     LicenseManager.outputMessage = function (header, message) {
         console.error('****************************************************************************************************************');
@@ -63,7 +85,7 @@ var LicenseManager = (function () {
         return day + ' ' + monthNames[monthIndex] + ' ' + year;
     };
     LicenseManager.getGridReleaseDate = function () {
-        return new Date(parseInt(LicenseManager.decode(LicenseManager.RELEASE_INFORMATION)));
+        return new Date(parseInt(LicenseManager_1.decode(LicenseManager_1.RELEASE_INFORMATION)));
     };
     ;
     LicenseManager.decode = function (input) {
@@ -89,7 +111,7 @@ var LicenseManager = (function () {
                 t = t + String.fromCharCode(i);
             }
         }
-        t = LicenseManager.utf8_decode(t);
+        t = LicenseManager_1.utf8_decode(t);
         return t;
     };
     LicenseManager.utf8_decode = function (input) {
@@ -113,17 +135,17 @@ var LicenseManager = (function () {
         return t;
     };
     LicenseManager.setLicenseKey = function (licenseKey) {
-        LicenseManager.licenseKey = licenseKey;
+        LicenseManager_1.licenseKey = licenseKey;
     };
-    LicenseManager.RELEASE_INFORMATION = 'MTQ2ODM5ODkxNjg4MA==';
-    __decorate([
-        main_1.Autowired('md5'), 
-        __metadata('design:type', md5_1.MD5)
-    ], LicenseManager.prototype, "md5", void 0);
-    LicenseManager = __decorate([
-        main_1.Bean('licenseManager'), 
-        __metadata('design:paramtypes', [])
-    ], LicenseManager);
     return LicenseManager;
 }());
+LicenseManager.RELEASE_INFORMATION = 'MTQ4NTE3OTkyOTcwNw==';
+__decorate([
+    main_1.Autowired('md5'),
+    __metadata("design:type", md5_1.MD5)
+], LicenseManager.prototype, "md5", void 0);
+LicenseManager = LicenseManager_1 = __decorate([
+    main_1.Bean('licenseManager')
+], LicenseManager);
 exports.LicenseManager = LicenseManager;
+var LicenseManager_1;

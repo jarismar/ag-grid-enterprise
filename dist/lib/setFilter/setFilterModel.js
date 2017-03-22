@@ -1,6 +1,10 @@
-// ag-grid-enterprise v7.0.2
+// ag-grid-enterprise v8.2.0
 "use strict";
 var main_1 = require("ag-grid/main");
+// we cannot have 'null' as a key in a JavaScript map,
+// it needs to be a string. so we use this string for
+// storing null values.
+var NULL_VALUE = '___NULL___';
 var SetFilterModel = (function () {
     function SetFilterModel(colDef, rowModel, valueGetter, doesRowPassOtherFilters, suppressSorting) {
         this.suppressSorting = suppressSorting;
@@ -8,7 +12,7 @@ var SetFilterModel = (function () {
         this.rowModel = rowModel;
         this.valueGetter = valueGetter;
         this.doesRowPassOtherFilters = doesRowPassOtherFilters;
-        this.filterParams = this.colDef.filterParams;
+        this.filterParams = this.colDef.filterParams ? this.colDef.filterParams : {};
         if (main_1.Utils.exists(this.filterParams)) {
             this.usingProvidedSet = main_1.Utils.exists(this.filterParams.values);
             this.showingAvailableOnly = this.filterParams.suppressRemoveEntries !== true;
@@ -160,19 +164,50 @@ var SetFilterModel = (function () {
         return this.displayedValues[index];
     };
     SetFilterModel.prototype.selectEverything = function () {
-        var count = this.allUniqueValues.length;
+        if (!this.filterParams.selectAllOnMiniFilter) {
+            this.selectOn(this.allUniqueValues);
+        }
+        else {
+            this.selectOn(this.displayedValues);
+        }
+    };
+    SetFilterModel.prototype.selectOn = function (toSelectOn) {
+        var count = toSelectOn.length;
         for (var i = 0; i < count; i++) {
-            var value = this.allUniqueValues[i];
-            this.selectedValuesMap[value] = null;
+            var key = toSelectOn[i];
+            var safeKey = this.valueToKey(key);
+            this.selectedValuesMap[safeKey] = null;
         }
         this.selectedValuesCount = count;
+    };
+    SetFilterModel.prototype.valueToKey = function (key) {
+        if (key === null) {
+            return NULL_VALUE;
+        }
+        else {
+            return key;
+        }
+    };
+    SetFilterModel.prototype.keyToValue = function (value) {
+        if (value === NULL_VALUE) {
+            return null;
+        }
+        else {
+            return value;
+        }
     };
     SetFilterModel.prototype.isFilterActive = function () {
         return this.allUniqueValues.length !== this.selectedValuesCount;
     };
     SetFilterModel.prototype.selectNothing = function () {
-        this.selectedValuesMap = {};
-        this.selectedValuesCount = 0;
+        var _this = this;
+        if (!this.filterParams.selectAllOnMiniFilter || !this.miniFilter) {
+            this.selectedValuesMap = {};
+            this.selectedValuesCount = 0;
+        }
+        else {
+            this.displayedValues.forEach(function (it) { return _this.unselectValue(it); });
+        }
     };
     SetFilterModel.prototype.getUniqueValueCount = function () {
         return this.allUniqueValues.length;
@@ -181,33 +216,50 @@ var SetFilterModel = (function () {
         return this.allUniqueValues[index];
     };
     SetFilterModel.prototype.unselectValue = function (value) {
-        if (this.selectedValuesMap[value] !== undefined) {
-            delete this.selectedValuesMap[value];
+        var safeKey = this.valueToKey(value);
+        if (this.selectedValuesMap[safeKey] !== undefined) {
+            delete this.selectedValuesMap[safeKey];
             this.selectedValuesCount--;
         }
     };
     SetFilterModel.prototype.selectValue = function (value) {
-        if (this.selectedValuesMap[value] === undefined) {
-            this.selectedValuesMap[value] = null;
+        var safeKey = this.valueToKey(value);
+        if (this.selectedValuesMap[safeKey] === undefined) {
+            this.selectedValuesMap[safeKey] = null;
             this.selectedValuesCount++;
         }
     };
     SetFilterModel.prototype.isValueSelected = function (value) {
-        return this.selectedValuesMap[value] !== undefined;
+        var safeKey = this.valueToKey(value);
+        return this.selectedValuesMap[safeKey] !== undefined;
     };
     SetFilterModel.prototype.isEverythingSelected = function () {
-        return this.allUniqueValues.length === this.selectedValuesCount;
+        var _this = this;
+        if (!this.filterParams.selectAllOnMiniFilter || !this.miniFilter) {
+            return this.allUniqueValues.length === this.selectedValuesCount;
+        }
+        else {
+            return this.displayedValues.filter(function (it) { return _this.isValueSelected(it); }).length === this.displayedValues.length;
+        }
     };
     SetFilterModel.prototype.isNothingSelected = function () {
-        return this.selectedValuesCount === 0;
+        var _this = this;
+        if (!this.filterParams.selectAllOnMiniFilter || !this.miniFilter) {
+            return this.selectedValuesCount === 0;
+        }
+        else {
+            return this.displayedValues.filter(function (it) { return _this.isValueSelected(it); }).length === 0;
+        }
     };
     SetFilterModel.prototype.getModel = function () {
+        var _this = this;
         if (!this.isFilterActive()) {
             return null;
         }
         var selectedValues = [];
         main_1.Utils.iterateObject(this.selectedValuesMap, function (key) {
-            selectedValues.push(key);
+            var value = _this.keyToValue(key);
+            selectedValues.push(value);
         });
         return selectedValues;
     };
@@ -216,9 +268,9 @@ var SetFilterModel = (function () {
         if (model && !isSelectAll) {
             this.selectNothing();
             for (var i = 0; i < model.length; i++) {
-                var newValue = model[i];
-                if (this.allUniqueValues.indexOf(newValue) >= 0) {
-                    this.selectValue(model[i]);
+                var value = model[i];
+                if (this.allUniqueValues.indexOf(value) >= 0) {
+                    this.selectValue(value);
                 }
             }
         }

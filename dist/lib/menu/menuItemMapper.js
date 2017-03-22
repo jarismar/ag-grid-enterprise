@@ -1,4 +1,4 @@
-// ag-grid-enterprise v7.0.2
+// ag-grid-enterprise v8.2.0
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -9,7 +9,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var ag_grid_1 = require('ag-grid');
+var ag_grid_1 = require("ag-grid");
 var clipboardService_1 = require("../clipboardService");
 var aggFuncService_1 = require("../aggregation/aggFuncService");
 var svgFactory = ag_grid_1.SvgFactory.getInstance();
@@ -97,34 +97,41 @@ var MenuItemMapper = (function () {
                 name: localeTextFunc('collapseAll', 'Collapse All'),
                 action: function () { return _this.gridApi.collapseAll(); }
             };
-            case 'toolPanel': return {
-                name: localeTextFunc('toolPanel', 'Tool Panel'),
-                checked: this.gridApi.isToolPanelShowing(),
-                action: function () { return _this.gridApi.showToolPanel(!_this.gridApi.isToolPanelShowing()); }
-            };
             case 'copy': return {
                 name: localeTextFunc('copy', 'Copy'),
                 shortcut: localeTextFunc('ctrlC', 'Ctrl+C'),
-                icon: svgFactory.createCopyIcon(),
+                icon: ag_grid_1.Utils.createIconNoSpan('clipboardCopy', this.gridOptionsWrapper, null, svgFactory.createCopyIcon),
                 action: function () { return _this.clipboardService.copyToClipboard(false); }
             };
             case 'copyWithHeaders': return {
                 name: localeTextFunc('copyWithHeaders', 'Copy with Headers'),
                 // shortcut: localeTextFunc('ctrlC','Ctrl+C'),
-                icon: svgFactory.createCopyIcon(),
+                icon: ag_grid_1.Utils.createIconNoSpan('clipboardCopy', this.gridOptionsWrapper, null, svgFactory.createCopyIcon),
                 action: function () { return _this.clipboardService.copyToClipboard(true); }
             };
             case 'paste': return {
                 name: localeTextFunc('paste', 'Paste'),
                 shortcut: localeTextFunc('ctrlV', 'Ctrl+V'),
                 disabled: true,
-                icon: svgFactory.createPasteIcon(),
+                icon: ag_grid_1.Utils.createIconNoSpan('clipboardPaste', this.gridOptionsWrapper, null, svgFactory.createPasteIcon),
                 action: function () { return _this.clipboardService.pasteFromClipboard(); }
             };
             case 'toolPanel': return {
                 name: localeTextFunc('toolPanel', 'Tool Panel'),
                 checked: this.gridApi.isToolPanelShowing(),
                 action: function () { return _this.gridApi.showToolPanel(!_this.gridApi.isToolPanelShowing()); }
+            };
+            case 'export': return {
+                name: localeTextFunc('export', 'Export'),
+                subMenu: ['csvExport', 'excelExport']
+            };
+            case 'csvExport': return {
+                name: localeTextFunc('csvExport', 'CSV Export'),
+                action: function () { return _this.gridApi.exportDataAsCsv({}); }
+            };
+            case 'excelExport': return {
+                name: localeTextFunc('excelExport', 'Excel Export'),
+                action: function () { return _this.gridApi.exportDataAsExcel({}); }
             };
             case 'separator': return 'separator';
             default:
@@ -157,30 +164,29 @@ var MenuItemMapper = (function () {
         });
         return result;
     };
-    __decorate([
-        ag_grid_1.Autowired('gridOptionsWrapper'), 
-        __metadata('design:type', ag_grid_1.GridOptionsWrapper)
-    ], MenuItemMapper.prototype, "gridOptionsWrapper", void 0);
-    __decorate([
-        ag_grid_1.Autowired('columnController'), 
-        __metadata('design:type', ag_grid_1.ColumnController)
-    ], MenuItemMapper.prototype, "columnController", void 0);
-    __decorate([
-        ag_grid_1.Autowired('gridApi'), 
-        __metadata('design:type', ag_grid_1.GridApi)
-    ], MenuItemMapper.prototype, "gridApi", void 0);
-    __decorate([
-        ag_grid_1.Autowired('clipboardService'), 
-        __metadata('design:type', clipboardService_1.ClipboardService)
-    ], MenuItemMapper.prototype, "clipboardService", void 0);
-    __decorate([
-        ag_grid_1.Autowired('aggFuncService'), 
-        __metadata('design:type', aggFuncService_1.AggFuncService)
-    ], MenuItemMapper.prototype, "aggFuncService", void 0);
-    MenuItemMapper = __decorate([
-        ag_grid_1.Bean('menuItemMapper'), 
-        __metadata('design:paramtypes', [])
-    ], MenuItemMapper);
     return MenuItemMapper;
 }());
+__decorate([
+    ag_grid_1.Autowired('gridOptionsWrapper'),
+    __metadata("design:type", ag_grid_1.GridOptionsWrapper)
+], MenuItemMapper.prototype, "gridOptionsWrapper", void 0);
+__decorate([
+    ag_grid_1.Autowired('columnController'),
+    __metadata("design:type", ag_grid_1.ColumnController)
+], MenuItemMapper.prototype, "columnController", void 0);
+__decorate([
+    ag_grid_1.Autowired('gridApi'),
+    __metadata("design:type", ag_grid_1.GridApi)
+], MenuItemMapper.prototype, "gridApi", void 0);
+__decorate([
+    ag_grid_1.Autowired('clipboardService'),
+    __metadata("design:type", clipboardService_1.ClipboardService)
+], MenuItemMapper.prototype, "clipboardService", void 0);
+__decorate([
+    ag_grid_1.Autowired('aggFuncService'),
+    __metadata("design:type", aggFuncService_1.AggFuncService)
+], MenuItemMapper.prototype, "aggFuncService", void 0);
+MenuItemMapper = __decorate([
+    ag_grid_1.Bean('menuItemMapper')
+], MenuItemMapper);
 exports.MenuItemMapper = MenuItemMapper;

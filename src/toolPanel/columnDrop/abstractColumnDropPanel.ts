@@ -37,6 +37,9 @@ export abstract class AbstractColumnDropPanel extends Component {
     private static STATE_NEW_COLUMNS_IN = 'newColumnsIn';
     private static STATE_REARRANGE_COLUMNS = 'rearrangeColumns';
 
+    private static CHAR_LEFT_ARROW = '&#8592;';
+    private static CHAR_RIGHT_ARROW = '&#8594;';
+
     private state = AbstractColumnDropPanel.STATE_NOT_DRAGGING;
 
     private logger: Logger;
@@ -143,18 +146,16 @@ export abstract class AbstractColumnDropPanel extends Component {
         let newIndex = 0;
         let mouseEvent = draggingEvent.event;
 
+        let enableRtl = this.beans.gridOptionsWrapper.isEnableRtl();
+        let goingLeft = draggingEvent.hDirection===HDirection.Left;
+        let mouseX = mouseEvent.clientX;
+
         this.childColumnComponents.forEach( childColumn => {
             let rect = childColumn.getGui().getBoundingClientRect();
-            if (draggingEvent.hDirection===HDirection.Left) {
-                let horizontalFit = mouseEvent.clientX >= rect.right;
-                if (horizontalFit) {
-                    newIndex++;
-                }
-            } else {
-                let horizontalFit = mouseEvent.clientX >= rect.left;
-                if (horizontalFit) {
-                    newIndex++;
-                }
+            let rectX = goingLeft ? rect.right : rect.left;
+            let horizontalFit = enableRtl ? (mouseX <= rectX) : (mouseX >= rectX);
+            if (horizontalFit) {
+                newIndex++;
             }
         });
 
@@ -402,8 +403,12 @@ export abstract class AbstractColumnDropPanel extends Component {
     private addArrowToGui(): void {
         // only add the arrows if the layout is horizontal
         if (this.horizontal) {
+            // for RTL it's a left arrow, otherwise it's a right arrow
+            let enableRtl = this.beans.gridOptionsWrapper.isEnableRtl();
+            let charCode = enableRtl ?
+                AbstractColumnDropPanel.CHAR_LEFT_ARROW : AbstractColumnDropPanel.CHAR_RIGHT_ARROW;
             var eArrow = document.createElement('span');
-            eArrow.innerHTML = '&#8594;';
+            eArrow.innerHTML = charCode;
             this.getGui().appendChild(eArrow);
         }
     }

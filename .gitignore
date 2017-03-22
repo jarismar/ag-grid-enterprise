@@ -1,1 +1,6 @@
+src/*.js
+src/**/*.js
+
 node_modules/
+
+ag-grid-enterprise.iml

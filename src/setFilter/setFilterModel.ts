@@ -1,11 +1,17 @@
 import {Utils} from "ag-grid/main";
 import {ColDef} from "ag-grid/main";
 import {SetFilterParameters} from "ag-grid/main";
+import {ISetFilterParams} from "./setFilter";
+
+// we cannot have 'null' as a key in a JavaScript map,
+// it needs to be a string. so we use this string for
+// storing null values.
+const NULL_VALUE = '___NULL___';
 
 export class SetFilterModel {
 
     private colDef: ColDef;
-    private filterParams: SetFilterParameters;
+    private filterParams: ISetFilterParams;
 
     private rowModel: any;
     private valueGetter: any;
@@ -31,7 +37,7 @@ export class SetFilterModel {
         this.valueGetter = valueGetter;
         this.doesRowPassOtherFilters = doesRowPassOtherFilters;
 
-        this.filterParams = <SetFilterParameters> this.colDef.filterParams;
+        this.filterParams = this.colDef.filterParams ? <ISetFilterParams> this.colDef.filterParams : <ISetFilterParams>{};
         if (Utils.exists(this.filterParams)) {
             this.usingProvidedSet = Utils.exists(this.filterParams.values);
             this.showingAvailableOnly = this.filterParams.suppressRemoveEntries!==true;
@@ -205,12 +211,37 @@ export class SetFilterModel {
     }
 
     public selectEverything() {
-        var count = this.allUniqueValues.length;
+        if (!this.filterParams.selectAllOnMiniFilter){
+            this.selectOn(this.allUniqueValues);
+        } else {
+            this.selectOn(this.displayedValues);
+        }
+    }
+
+    private selectOn(toSelectOn: any[]) {
+        var count = toSelectOn.length;
         for (var i = 0; i < count; i++) {
-            var value = this.allUniqueValues[i];
-            this.selectedValuesMap[value] = null;
+            var key = toSelectOn[i];
+            let safeKey = this.valueToKey(key);
+            this.selectedValuesMap[safeKey] = null;
         }
         this.selectedValuesCount = count;
+    }
+
+    private valueToKey(key: string): string {
+        if (key===null) {
+            return NULL_VALUE;
+        } else {
+            return key;
+        }
+    }
+
+    private keyToValue(value: string): string {
+        if (value===NULL_VALUE) {
+            return null;
+        } else {
+            return value;
+        }
     }
 
     public isFilterActive() {
@@ -218,8 +249,12 @@ export class SetFilterModel {
     }
 
     public selectNothing() {
-        this.selectedValuesMap = {};
-        this.selectedValuesCount = 0;
+        if (!this.filterParams.selectAllOnMiniFilter || !this.miniFilter){
+            this.selectedValuesMap = {};
+            this.selectedValuesCount = 0;
+        }else {
+            this.displayedValues.forEach(it=>this.unselectValue(it));
+        }
     }
 
     public getUniqueValueCount() {
@@ -231,49 +266,61 @@ export class SetFilterModel {
     }
 
     public unselectValue(value: any) {
-        if (this.selectedValuesMap[value] !== undefined) {
-            delete this.selectedValuesMap[value];
+        let safeKey = this.valueToKey(value);
+        if (this.selectedValuesMap[safeKey] !== undefined) {
+            delete this.selectedValuesMap[safeKey];
             this.selectedValuesCount--;
         }
     }
 
     public selectValue(value: any) {
-        if (this.selectedValuesMap[value] === undefined) {
-            this.selectedValuesMap[value] = null;
+        let safeKey = this.valueToKey(value);
+        if (this.selectedValuesMap[safeKey] === undefined) {
+            this.selectedValuesMap[safeKey] = null;
             this.selectedValuesCount++;
         }
     }
 
     public isValueSelected(value: any) {
-        return this.selectedValuesMap[value] !== undefined;
+        let safeKey = this.valueToKey(value);
+        return this.selectedValuesMap[safeKey] !== undefined;
     }
 
     public isEverythingSelected() {
-        return this.allUniqueValues.length === this.selectedValuesCount;
+        if (!this.filterParams.selectAllOnMiniFilter || !this.miniFilter){
+            return this.allUniqueValues.length === this.selectedValuesCount;
+        } else {
+            return this.displayedValues.filter(it=>this.isValueSelected(it)).length === this.displayedValues.length;
+        }
     }
 
     public isNothingSelected() {
-        return this.selectedValuesCount === 0;
+        if (!this.filterParams.selectAllOnMiniFilter || !this.miniFilter){
+            return this.selectedValuesCount === 0;
+        }else {
+            return this.displayedValues.filter(it=>this.isValueSelected(it)).length === 0;
+        }
     }
 
-    public getModel() {
+    public getModel():string[] {
         if (!this.isFilterActive()) {
             return null;
         }
-        var selectedValues = <any>[];
-        Utils.iterateObject(this.selectedValuesMap, function (key: any) {
-            selectedValues.push(key);
+        let selectedValues:string[] = [];
+        Utils.iterateObject(this.selectedValuesMap, (key: string) => {
+            let value = this.keyToValue(key);
+            selectedValues.push(value);
         });
         return selectedValues;
     }
 
-    public setModel(model: any, isSelectAll = false) {
+    public setModel(model: string[], isSelectAll = false) {
         if (model && !isSelectAll) {
             this.selectNothing();
-            for (var i = 0; i < model.length; i++) {
-                var newValue = model[i];
-                if (this.allUniqueValues.indexOf(newValue) >= 0) {
-                    this.selectValue(model[i]);
+            for (let i = 0; i < model.length; i++) {
+                let value = model[i];
+                if (this.allUniqueValues.indexOf(value) >= 0) {
+                    this.selectValue(value);
                 }
             }
         } else {

@@ -1,4 +1,4 @@
-// ag-grid-enterprise v7.0.2
+// ag-grid-enterprise v8.2.0
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -21,30 +21,34 @@ var virtualList_1 = require("../rendering/virtualList");
 var SetFilter = (function (_super) {
     __extends(SetFilter, _super);
     function SetFilter() {
-        _super.call(this);
+        return _super.call(this) || this;
     }
-    SetFilter.prototype.postConstruct = function () {
-        this.setTemplate(this.createTemplate());
+    SetFilter.prototype.modelFromFloatingFilter = function (from) {
+        return [from];
+    };
+    SetFilter.prototype.initialiseFilterBodyUi = function () {
+        var _this = this;
         this.virtualList = new virtualList_1.VirtualList();
         this.context.wireBean(this.virtualList);
         this.getGui().querySelector('#richList').appendChild(this.virtualList.getGui());
-    };
-    SetFilter.prototype.init = function (params) {
-        this.params = params;
-        this.applyActive = this.params.apply === true;
-        this.suppressSorting = this.params.suppressSorting === true;
-        this.newRowsActionKeep = this.params.newRowsAction === 'keep';
-        if (main_1.Utils.exists(this.params.cellHeight)) {
-            this.virtualList.setRowHeight(this.params.cellHeight);
+        if (main_1.Utils.exists(this.filterParams.cellHeight)) {
+            this.virtualList.setRowHeight(this.filterParams.cellHeight);
         }
         this.virtualList.setComponentCreator(this.createSetListItem.bind(this));
-        this.model = new setFilterModel_1.SetFilterModel(params.colDef, params.rowModel, params.valueGetter, params.doesRowPassOtherFilter, this.suppressSorting);
+        this.model = new setFilterModel_1.SetFilterModel(this.filterParams.colDef, this.filterParams.rowModel, this.filterParams.valueGetter, this.filterParams.doesRowPassOtherFilter, this.suppressSorting);
         this.virtualList.setModel(new ModelWrapper(this.model));
-        this.createGui();
+        main_1._.setVisible(this.getGui().querySelector('#ag-mini-filter'), !this.filterParams.suppressMiniFilter);
+        this.eMiniFilter.value = this.model.getMiniFilter();
+        this.addDestroyableEventListener(this.eMiniFilter, 'input', function () { return _this.onMiniFilterChanged(); });
+        this.eSelectAll.onclick = this.onSelectAll.bind(this);
+        this.updateSelectAll();
+        this.virtualList.refresh();
+    };
+    SetFilter.prototype.refreshFilterBodyUi = function () {
     };
     SetFilter.prototype.createSetListItem = function (value) {
         var _this = this;
-        var cellRenderer = this.params.cellRenderer;
+        var cellRenderer = this.filterParams.cellRenderer;
         var listItem = new setFilterListItem_1.SetFilterListItem(value, cellRenderer);
         this.context.wireBean(listItem);
         listItem.setSelected(this.model.isValueSelected(value));
@@ -64,16 +68,16 @@ var SetFilter = (function (_super) {
     };
     SetFilter.prototype.doesFilterPass = function (params) {
         // if no filter, always pass
-        if (this.model.isEverythingSelected()) {
+        if (this.model.isEverythingSelected() && !this.filterParams.selectAllOnMiniFilter) {
             return true;
         }
         // if nothing selected in filter, always fail
-        if (this.model.isNothingSelected()) {
+        if (this.model.isNothingSelected() && !this.filterParams.selectAllOnMiniFilter) {
             return false;
         }
-        var value = this.params.valueGetter(params.node);
-        if (this.params.colDef.keyCreator) {
-            value = this.params.colDef.keyCreator({ value: value });
+        var value = this.filterParams.valueGetter(params.node);
+        if (this.filterParams.colDef.keyCreator) {
+            value = this.filterParams.colDef.keyCreator({ value: value });
         }
         value = main_1.Utils.makeNull(value);
         if (Array.isArray(value)) {
@@ -89,7 +93,7 @@ var SetFilter = (function (_super) {
         }
     };
     SetFilter.prototype.onNewRowsLoaded = function () {
-        var keepSelection = this.params && this.params.newRowsAction === 'keep';
+        var keepSelection = this.filterParams && this.filterParams.newRowsAction === 'keep';
         var isSelectAll = this.eSelectAll && this.eSelectAll.checked && !this.eSelectAll.indeterminate;
         // default is reset
         this.model.refreshAfterNewRowsLoaded(keepSelection, isSelectAll);
@@ -100,22 +104,9 @@ var SetFilter = (function (_super) {
         this.model.refreshAfterAnyFilterChanged();
         this.virtualList.refresh();
     };
-    SetFilter.prototype.createTemplate = function () {
-        var translate = this.gridOptionsWrapper.getLocaleTextFunc();
-        return "<div>\n                    <div class=\"ag-filter-header-container\">\n                        <input class=\"ag-filter-filter\" type=\"text\" placeholder=\"" + translate('searchOoo', 'Search...') + "\"/>\n                    </div>\n                    <div class=\"ag-filter-header-container\">\n                        <label>\n                            <input id=\"selectAll\" type=\"checkbox\" class=\"ag-filter-checkbox\"/>\n                            <span class=\"ag-filter-value\">(" + translate('selectAll', 'Select All') + ")</span>\n                        </label>\n                    </div>\n                    <div id=\"richList\" class=\"ag-set-filter-list\"></div>\n                    <div class=\"ag-filter-apply-panel\" id=\"applyPanel\">\n                        <button type=\"button\" id=\"applyButton\">" + translate('applyFilter', 'Apply Filter') + "</button>\n                    </div>\n                </div>";
-    };
-    SetFilter.prototype.createGui = function () {
-        var _this = this;
-        this.eSelectAll = this.queryForHtmlElement("#selectAll");
-        this.eMiniFilter = this.queryForHtmlElement(".ag-filter-filter");
-        this.eMiniFilter.value = this.model.getMiniFilter();
-        this.addDestroyableEventListener(this.eMiniFilter, 'input', function () {
-            _this.onMiniFilterChanged();
-        });
-        this.eSelectAll.onclick = this.onSelectAll.bind(this);
-        this.updateSelectAll();
-        this.setupApply();
-        this.virtualList.refresh();
+    SetFilter.prototype.bodyTemplate = function () {
+        var translate = this.translate.bind(this);
+        return "<div>\n                    <div class=\"ag-filter-header-container\" id=\"ag-mini-filter\">\n                        <input class=\"ag-filter-filter\" type=\"text\" placeholder=\"" + translate('searchOoo') + "\"/>\n                    </div>\n                    <div class=\"ag-filter-header-container\">\n                        <label>\n                            <input id=\"selectAll\" type=\"checkbox\" class=\"ag-filter-checkbox\"/>\n                            <span class=\"ag-filter-value\">(" + translate('selectAll') + ")</span>\n                        </label>\n                    </div>\n                    <div id=\"richList\" class=\"ag-set-filter-list\"></div>                    \n                </div>";
     };
     SetFilter.prototype.updateSelectAll = function () {
         if (this.model.isEverythingSelected()) {
@@ -130,29 +121,12 @@ var SetFilter = (function (_super) {
             this.eSelectAll.indeterminate = true;
         }
     };
-    SetFilter.prototype.setupApply = function () {
-        var _this = this;
-        if (this.applyActive) {
-            this.eApplyButton = this.queryForHtmlElement('#applyButton');
-            this.eApplyButton.addEventListener('click', function () {
-                _this.params.filterChangedCallback();
-            });
-        }
-        else {
-            main_1.Utils.removeElement(this.getGui(), '#applyPanel');
-        }
-    };
-    SetFilter.prototype.filterChanged = function () {
-        this.params.filterModifiedCallback();
-        if (!this.applyActive) {
-            this.params.filterChangedCallback();
-        }
-    };
     SetFilter.prototype.onMiniFilterChanged = function () {
         var miniFilterChanged = this.model.setMiniFilter(this.eMiniFilter.value);
         if (miniFilterChanged) {
             this.virtualList.refresh();
         }
+        this.updateSelectAll();
     };
     SetFilter.prototype.onSelectAll = function () {
         var checked = this.eSelectAll.checked;
@@ -163,7 +137,7 @@ var SetFilter = (function (_super) {
             this.model.selectNothing();
         }
         this.virtualList.refresh();
-        this.filterChanged();
+        this.onFilterChanged();
     };
     SetFilter.prototype.onItemSelected = function (value, selected) {
         if (selected) {
@@ -173,7 +147,7 @@ var SetFilter = (function (_super) {
             this.model.unselectValue(value);
         }
         this.updateSelectAll();
-        this.filterChanged();
+        this.onFilterChanged();
     };
     SetFilter.prototype.setMiniFilter = function (newMiniFilter) {
         this.model.setMiniFilter(newMiniFilter);
@@ -216,30 +190,27 @@ var SetFilter = (function (_super) {
     SetFilter.prototype.getUniqueValue = function (index) {
         return this.model.getUniqueValue(index);
     };
-    SetFilter.prototype.getModel = function () {
+    SetFilter.prototype.serialize = function () {
         return this.model.getModel();
     };
-    SetFilter.prototype.setModel = function (dataModel) {
+    SetFilter.prototype.parse = function (dataModel) {
         this.model.setModel(dataModel);
         this.updateSelectAll();
         this.virtualList.refresh();
     };
-    __decorate([
-        main_1.Autowired('gridOptionsWrapper'), 
-        __metadata('design:type', main_1.GridOptionsWrapper)
-    ], SetFilter.prototype, "gridOptionsWrapper", void 0);
-    __decorate([
-        main_1.Autowired('context'), 
-        __metadata('design:type', main_1.Context)
-    ], SetFilter.prototype, "context", void 0);
-    __decorate([
-        main_1.PostConstruct, 
-        __metadata('design:type', Function), 
-        __metadata('design:paramtypes', []), 
-        __metadata('design:returntype', void 0)
-    ], SetFilter.prototype, "postConstruct", null);
+    SetFilter.prototype.resetState = function () {
+        this.model.setModel(null);
+    };
     return SetFilter;
-}(main_1.Component));
+}(main_1.BaseFilter));
+__decorate([
+    main_1.QuerySelector('#selectAll'),
+    __metadata("design:type", HTMLInputElement)
+], SetFilter.prototype, "eSelectAll", void 0);
+__decorate([
+    main_1.QuerySelector('.ag-filter-filter'),
+    __metadata("design:type", HTMLInputElement)
+], SetFilter.prototype, "eMiniFilter", void 0);
 exports.SetFilter = SetFilter;
 var ModelWrapper = (function () {
     function ModelWrapper(model) {
