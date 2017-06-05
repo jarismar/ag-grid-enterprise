@@ -54,6 +54,10 @@ export class ViewportRowModel implements IRowModel {
         this.destroyCurrentDatasource();
     }
 
+    public isLastRowFound(): boolean {
+        return true;
+    }
+
     private destroyCurrentDatasource(): void {
         if (this.viewportDatasource && this.viewportDatasource.destroy) {
             this.viewportDatasource.destroy();
@@ -136,6 +140,14 @@ export class ViewportRowModel implements IRowModel {
         return this.rowNodesByIndex[rowIndex];
     }
 
+    public getPageFirstRow(): number {
+        return 0;
+    }
+
+    public getPageLastRow(): number {
+        return this.rowCount - 1;
+    }
+
     public getRowCount(): number {
         return this.rowCount;
     }
@@ -148,7 +160,14 @@ export class ViewportRowModel implements IRowModel {
         }
     }
 
-    public getRowCombinedHeight(): number {
+    public getRowBounds(index: number): {rowTop: number, rowHeight: number} {
+        return {
+            rowHeight: this.rowHeight,
+            rowTop: this.rowHeight * index
+        };
+    }
+
+    public getCurrentPageHeight(): number {
         return this.rowCount * this.rowHeight;
     }
 

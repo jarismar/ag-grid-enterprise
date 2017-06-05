@@ -37,6 +37,8 @@ export class EnterpriseMenuFactory implements IMenuFactory {
 
         this.showMenu(column, (menu: EnterpriseMenu)=> {
             this.popupService.positionPopupUnderMouseEvent({
+                column: column,
+                type: 'columnMenu',
                 mouseEvent: mouseEvent,
                 ePopup: menu.getGui()
             });
@@ -50,7 +52,10 @@ export class EnterpriseMenuFactory implements IMenuFactory {
     public showMenuAfterButtonClick(column: Column, eventSource: HTMLElement, defaultTab?:string): void {
 
         this.showMenu(column, (menu: EnterpriseMenu)=> {
-            this.popupService.positionPopupUnderComponent({eventSource: eventSource,
+            this.popupService.positionPopupUnderComponent({
+                column: column,
+                type: 'columnMenu',
+                eventSource: eventSource,
                 ePopup: menu.getGui(),
                 nudgeX: -9,
                 nudgeY: -26,
@@ -181,7 +186,6 @@ export class EnterpriseMenu {
     }
 
     public showTab(toShow:string) {
-        console.log('showing : ' + toShow + ' - ' + this.tabItemFilter)
         if (this.tabItemColumns && toShow === EnterpriseMenu.TAB_COLUMNS) {
             this.tabbedLayout.showItem(this.tabItemColumns);
         }

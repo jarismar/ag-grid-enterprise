@@ -1,4 +1,4 @@
-// ag-grid-enterprise v8.2.0
+// ag-grid-enterprise v10.0.1
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -37,6 +37,13 @@ var AggregationStage = (function () {
                 _this.recursivelyCreateAggData(child, measureColumns, pivotColumns);
             }
         });
+        //Optionally prevent the aggregation at the root Node
+        //https://ag-grid.atlassian.net/browse/AG-388
+        var notPivoting = !this.columnController.isPivotMode();
+        var suppressAggAtRootLevel = this.gridOptionsWrapper.isSuppressAggAtRootLevel();
+        var isRootNode = rowNode.level === -1;
+        if (isRootNode && suppressAggAtRootLevel && notPivoting)
+            return;
         this.aggregateRowNode(rowNode, measureColumns, pivotColumns);
     };
     AggregationStage.prototype.aggregateRowNode = function (rowNode, measureColumns, pivotColumns) {
@@ -44,13 +51,13 @@ var AggregationStage = (function () {
         var pivotColumnsMissing = pivotColumns.length === 0;
         var userProvidedGroupRowAggNodes = this.gridOptionsWrapper.getGroupRowAggNodesFunc();
         var aggResult;
-        if (userProvidedGroupRowAggNodes) {
+        if (rowNode.group && userProvidedGroupRowAggNodes) {
             aggResult = userProvidedGroupRowAggNodes(rowNode.childrenAfterFilter);
         }
         else if (measureColumnsMissing) {
             aggResult = null;
         }
-        else if (pivotColumnsMissing) {
+        else if (rowNode.group && pivotColumnsMissing) {
             aggResult = this.aggregateRowNodeUsingValuesOnly(rowNode, measureColumns);
         }
         else {
@@ -99,7 +106,22 @@ var AggregationStage = (function () {
     // using column ID's (rather than, eg, valueGetters), so we need to have the value of the
     // group key in the data, so when copy to clipboard is executed, the value is picked up correctly.
     AggregationStage.prototype.putInValueForGroupNode = function (result, rowNode) {
-        result[main_1.ColumnController.GROUP_AUTO_COLUMN_ID] = rowNode.key;
+        var autoCols = this.columnController.getGroupAutoColumns();
+        if (!autoCols) {
+            return;
+        }
+        autoCols.forEach(function (autoCol) {
+            var rendererParams = autoCol.getColDef().cellRendererParams;
+            var groupKeyExists = main_1.Utils.exists(rendererParams) && main_1.Utils.exists(rendererParams.groupKey);
+            if (groupKeyExists) {
+                if (rendererParams.groupKey === rowNode.field) {
+                    result[autoCol.getColId()] = rowNode.key;
+                }
+            }
+            else {
+                result[autoCol.getColId()] = rowNode.key;
+            }
+        });
     };
     AggregationStage.prototype.getValuesPivotNonLeaf = function (rowNode, colId) {
         var values = [];

@@ -1,32 +1,33 @@
-import {ColumnController} from 'ag-grid/main';
-import {ValueService} from 'ag-grid/main';
-import {Column} from 'ag-grid/main';
-import {IExcelCreator} from 'ag-grid/main';
-import {Bean, Autowired} from 'ag-grid/main';
-import {Downloader} from 'ag-grid/main';
-import {_} from 'ag-grid/main';
 import {
-    ExcelXmlFactory,
-    ExcelDataType,
+    Autowired,
+    BaseGridSerializingSession,
+    Bean,
+    Column,
+    ColumnController,
+    Downloader,
     ExcelCell,
+    ExcelColumn,
+    ExcelDataType,
+    ExcelExportParams,
     ExcelRow,
     ExcelStyle,
     ExcelWorksheet,
-    ExcelColumn
-} from "./excelXmlFactory";
-import {
+    GridOptions,
+    GridOptionsWrapper,
     GridSerializer,
+    IExcelCreator,
+    ProcessCellForExportParams,
+    ProcessHeaderForExportParams,
     RowAccumulator,
+    RowNode,
+    RowSpanningAccumulator,
     RowType,
-    BaseGridSerializingSession,
-    RowSpanningAccumulator
-} from 'ag-grid/main';
-import {RowNode} from 'ag-grid/main';
-import {Utils} from 'ag-grid/main';
-import {GridOptionsWrapper} from 'ag-grid/main';
-import {ProcessCellForExportParams, ProcessHeaderForExportParams, GridOptions} from 'ag-grid/main';
-import {ExportParams} from 'ag-grid/main';
-import {StylingService} from 'ag-grid/main';
+    StylingService,
+    Utils,
+    ValueService
+} from "ag-grid/main";
+
+import {ExcelXmlFactory} from "./excelXmlFactory";
 
 
 export interface ExcelMixedStyle {
@@ -35,11 +36,13 @@ export interface ExcelMixedStyle {
     result: ExcelStyle
 }
 
-export class ExcelGridSerializingSession extends BaseGridSerializingSession {
-    private styleIds:string[];
+export class ExcelGridSerializingSession extends BaseGridSerializingSession<ExcelCell[][]> {
+    private stylesByIds:any;
     private mixedStyles:{[key:string]: ExcelMixedStyle} = {};
     private mixedStyleCounter:number = 0;
     private excelStyles: ExcelStyle[];
+    private customHeader:ExcelCell[][];
+    private customFooter:ExcelCell[][];
 
     constructor (
         columnController: ColumnController,
@@ -52,12 +55,12 @@ export class ExcelGridSerializingSession extends BaseGridSerializingSession {
         private styleLinker:(rowType: RowType, rowIndex:number, colIndex:number, value:string, column:Column, node:RowNode)=> string[]
     ){
         super(columnController, valueService, gridOptionsWrapper, processCellCallback, processHeaderCallback, (raw: string) => Utils.escape(raw));
+        this.stylesByIds = {};
         if (!baseExcelStyles) {
-            this.styleIds = [];
             this.excelStyles = [];
         }else{
-            this.styleIds = baseExcelStyles.map((it:ExcelStyle)=>{
-                return it.id
+            baseExcelStyles.forEach((it:ExcelStyle)=>{
+                this.stylesByIds[it.id] = it;
             });
             this.excelStyles = baseExcelStyles.slice();
         }
@@ -66,12 +69,12 @@ export class ExcelGridSerializingSession extends BaseGridSerializingSession {
 
     private cols:ExcelColumn[];
 
-    public addCustomHeader(customHeader: string): void {
-        throw new Error ("Custom header not supported for Excel serialization");
+    public addCustomHeader(customHeader: ExcelCell[][]): void {
+        this.customHeader = customHeader;
     }
 
-    public addCustomFooter(customFooter: string): void {
-        throw new Error ("Custom footer not supported for Excel serialization");
+    public addCustomFooter(customFooter: ExcelCell[][]): void {
+        this.customFooter = customFooter;
     }
 
     public prepare(columnsToExport: Column[]): void {
@@ -92,7 +95,7 @@ export class ExcelGridSerializingSession extends BaseGridSerializingSession {
         return {
              onColumn: (header: string, index: number, span:number)=>{
                  let styleIds:string[] = that.styleLinker(RowType.HEADER_GROUPING, 1, index, "grouping-" + header, null, null);
-                 currentCells.push(that.createMergedCell(styleIds.length > 0 ? styleIds[0] : null, ExcelDataType.String, header, span));
+                 currentCells.push(that.createMergedCell(styleIds.length > 0 ? styleIds[0] : null, "String", header, span));
              }
         };
     }
@@ -120,16 +123,27 @@ export class ExcelGridSerializingSession extends BaseGridSerializingSession {
         return (column: Column, index: number, node?:RowNode) => {
             let nameForCol = this.extractHeaderValue(column);
             let styleIds:string[] = that.styleLinker(RowType.HEADER, rowIndex, index, nameForCol, column, null);
-            currentCells.push(this.createCell(styleIds.length > 0 ? styleIds[0] : null, ExcelDataType.String, nameForCol))
+            currentCells.push(this.createCell(styleIds.length > 0 ? styleIds[0] : null, 'String', nameForCol))
         }
     }
 
     public parse(): string {
+        function join (header:ExcelCell[][], body:ExcelRow[], footer:ExcelCell[][]): ExcelRow[]{
+            let all:ExcelRow[] = [];
+            if (header){
+                header.forEach(rowArray=>all.push({cells:rowArray}))
+            }
+            body.forEach(it=>all.push(it));
+            if (footer){
+                footer.forEach(rowArray=>all.push({cells:rowArray}))
+            }
+            return all;
+        }
         let data: ExcelWorksheet [] = [{
             name: "ag-grid",
             table: {
                 columns: this.cols,
-                rows: this.rows
+                rows: join(this.customHeader, this.rows, this.customFooter)
             }
         }];
         return this.excelXmlFactory.createExcelXml(this.excelStyles, data)
@@ -150,7 +164,7 @@ export class ExcelGridSerializingSession extends BaseGridSerializingSession {
                 }
                 excelStyleId = this.mixedStyles[key].excelID;
             }
-            let type: ExcelDataType = Utils.isNumeric(valueForCell) ? ExcelDataType.Number : ExcelDataType.String;
+            let type: ExcelDataType = Utils.isNumeric(valueForCell) ? 'Number' : 'String';
             currentCells.push(that.createCell(excelStyleId, type, valueForCell))}
     }
 
@@ -175,22 +189,37 @@ export class ExcelGridSerializingSession extends BaseGridSerializingSession {
             key: key,
             result: resultantStyle
         };
-        this.excelStyles.push(resultantStyle)
-        this.styleIds.push(excelId);
+        this.excelStyles.push(resultantStyle);
+        this.stylesByIds[excelId] = resultantStyle;
     }
 
     private styleExists (styleId:string):boolean{
         if (styleId == null) return false;
 
-        return this.styleIds.indexOf(styleId) > -1
+        return this.stylesByIds[styleId];
     }
 
 
     private createCell(styleId: string, type: ExcelDataType, value: string) :ExcelCell{
+        let actualStyle:ExcelStyle = this.stylesByIds[styleId];
+        let styleExists:boolean = actualStyle != null;
+
+        function getType ():ExcelDataType{
+            if (
+                styleExists &&
+                actualStyle.dataType
+            ) switch (actualStyle.dataType){
+                case 'string': return 'String';
+                case 'number': return 'Number';
+            }
+
+            return type;
+        }
+
         return {
-            styleId: this.styleExists(styleId) ? styleId : null,
+            styleId: styleExists ? styleId : null,
             data: {
-                type: type,
+                type: getType(),
                 value: value
             }
         };
@@ -219,7 +248,7 @@ export class ExcelCreator implements IExcelCreator{
     @Autowired('gridOptions') private gridOptions: GridOptions;
     @Autowired('stylingService') private stylingService: StylingService;
 
-    public exportDataAsExcel(params?: ExportParams): void {
+    public exportDataAsExcel(params?: ExcelExportParams): void {
         let fileNamePresent = params && params.fileName && params.fileName.length !== 0;
         let fileName = fileNamePresent ? params.fileName : 'export.xls';
 
@@ -231,11 +260,11 @@ export class ExcelCreator implements IExcelCreator{
         this.downloader.download(
             fileName,
             content,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            "application/vnd.ms-excel"
         );
     }
 
-    public getDataAsExcelXml(params?: ExportParams): string{
+    public getDataAsExcelXml(params?: ExcelExportParams): string{
         return this.gridSerializer.serialize(
             new ExcelGridSerializingSession(
                 this.columnController,

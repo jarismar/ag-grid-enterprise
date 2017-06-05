@@ -86,6 +86,9 @@ export class ContextMenuFactory implements IContextMenuFactory {
         );
 
         this.popupService.positionPopupUnderMouseEvent({
+            column: column,
+            rowNode: node,
+            type: 'contextMenu',
             mouseEvent: mouseEvent,
             ePopup: eMenuGui
         });

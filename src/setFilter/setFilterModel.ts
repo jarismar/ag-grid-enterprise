@@ -1,7 +1,6 @@
 import {Utils} from "ag-grid/main";
 import {ColDef} from "ag-grid/main";
-import {SetFilterParameters} from "ag-grid/main";
-import {ISetFilterParams} from "./setFilter";
+import {ISetFilterParams} from "ag-grid/main";
 
 // we cannot have 'null' as a key in a JavaScript map,
 // it needs to be a string. so we use this string for
@@ -211,7 +210,7 @@ export class SetFilterModel {
     }
 
     public selectEverything() {
-        if (!this.filterParams.selectAllOnMiniFilter){
+        if (!this.filterParams.selectAllOnMiniFilter || !this.miniFilter){
             this.selectOn(this.allUniqueValues);
         } else {
             this.selectOn(this.displayedValues);

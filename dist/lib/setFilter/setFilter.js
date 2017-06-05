@@ -1,4 +1,4 @@
-// ag-grid-enterprise v8.2.0
+// ag-grid-enterprise v10.0.1
 "use strict";
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
@@ -23,6 +23,7 @@ var SetFilter = (function (_super) {
     function SetFilter() {
         return _super.call(this) || this;
     }
+    SetFilter.prototype.customInit = function () { };
     SetFilter.prototype.modelFromFloatingFilter = function (from) {
         return [from];
     };
@@ -35,7 +36,7 @@ var SetFilter = (function (_super) {
             this.virtualList.setRowHeight(this.filterParams.cellHeight);
         }
         this.virtualList.setComponentCreator(this.createSetListItem.bind(this));
-        this.model = new setFilterModel_1.SetFilterModel(this.filterParams.colDef, this.filterParams.rowModel, this.filterParams.valueGetter, this.filterParams.doesRowPassOtherFilter, this.suppressSorting);
+        this.model = new setFilterModel_1.SetFilterModel(this.filterParams.colDef, this.filterParams.rowModel, this.filterParams.valueGetter, this.filterParams.doesRowPassOtherFilter, this.filterParams.suppressSorting);
         this.virtualList.setModel(new ModelWrapper(this.model));
         main_1._.setVisible(this.getGui().querySelector('#ag-mini-filter'), !this.filterParams.suppressMiniFilter);
         this.eMiniFilter.value = this.model.getMiniFilter();
@@ -151,6 +152,7 @@ var SetFilter = (function (_super) {
     };
     SetFilter.prototype.setMiniFilter = function (newMiniFilter) {
         this.model.setMiniFilter(newMiniFilter);
+        this.eMiniFilter.value = this.model.getMiniFilter();
     };
     SetFilter.prototype.getMiniFilter = function () {
         return this.model.getMiniFilter();
@@ -199,7 +201,9 @@ var SetFilter = (function (_super) {
         this.virtualList.refresh();
     };
     SetFilter.prototype.resetState = function () {
-        this.model.setModel(null);
+        this.setMiniFilter(null);
+        this.model.setModel(null, true);
+        this.selectEverything();
     };
     return SetFilter;
 }(main_1.BaseFilter));

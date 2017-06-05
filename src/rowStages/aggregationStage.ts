@@ -51,6 +51,12 @@ export class AggregationStage implements IRowNodeStage {
             }
         });
 
+        //Optionally prevent the aggregation at the root Node
+        //https://ag-grid.atlassian.net/browse/AG-388
+        let notPivoting = !this.columnController.isPivotMode();
+        let suppressAggAtRootLevel = this.gridOptionsWrapper.isSuppressAggAtRootLevel();
+        let isRootNode = rowNode.level === -1;
+        if (isRootNode && suppressAggAtRootLevel && notPivoting) return;
         this.aggregateRowNode(rowNode, measureColumns, pivotColumns);
     }
 
@@ -61,11 +67,11 @@ export class AggregationStage implements IRowNodeStage {
         var userProvidedGroupRowAggNodes = this.gridOptionsWrapper.getGroupRowAggNodesFunc();
 
         var aggResult: any;
-        if (userProvidedGroupRowAggNodes) {
+        if (rowNode.group && userProvidedGroupRowAggNodes) {
             aggResult = userProvidedGroupRowAggNodes(rowNode.childrenAfterFilter);
         } else if (measureColumnsMissing) {
             aggResult = null;
-        } else if (pivotColumnsMissing) {
+        } else if (rowNode.group && pivotColumnsMissing) {
             aggResult = this.aggregateRowNodeUsingValuesOnly(rowNode, measureColumns);
         } else {
             aggResult = this.aggregateRowNodeUsingValuesAndPivot(rowNode);
@@ -126,7 +132,19 @@ export class AggregationStage implements IRowNodeStage {
     // using column ID's (rather than, eg, valueGetters), so we need to have the value of the
     // group key in the data, so when copy to clipboard is executed, the value is picked up correctly.
     private putInValueForGroupNode(result: any, rowNode: RowNode): void {
-        result[ColumnController.GROUP_AUTO_COLUMN_ID] = rowNode.key;
+        let autoCols = this.columnController.getGroupAutoColumns();
+        if (!autoCols) { return; }
+        autoCols.forEach( autoCol => {
+            let rendererParams = autoCol.getColDef().cellRendererParams;
+            let groupKeyExists = Utils.exists(rendererParams) && Utils.exists(rendererParams.groupKey);
+            if (groupKeyExists) {
+                if (rendererParams.groupKey === rowNode.field) {
+                    result[autoCol.getColId()] = rowNode.key;
+                }
+            } else {
+                result[autoCol.getColId()] = rowNode.key;
+            }
+        });
     }
 
     private getValuesPivotNonLeaf(rowNode: RowNode, colId: string): any[] {

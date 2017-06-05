@@ -7,24 +7,12 @@ import {
     ICellRendererFunc,
     Component,
     BaseFilter,
-    QuerySelector
+    QuerySelector,
+    ISetFilterParams
 } from "ag-grid/main";
 import {SetFilterModel} from "./setFilterModel";
 import {SetFilterListItem} from "./setFilterListItem";
 import {VirtualList, VirtualListModel} from "../rendering/virtualList";
-
-export interface ISetFilterParams extends IFilterParams {
-    suppressRemoveEntries ?: boolean;
-    values ?: any;
-    cellHeight: number;
-    apply: boolean;
-    suppressSorting: boolean;
-    cellRenderer: {new(): ICellRendererComp} | ICellRendererFunc | string;
-    newRowsAction: string;
-    suppressMiniFilter:boolean;
-    selectAllOnMiniFilter:boolean;
-    comparator?: (a: any, b: any) => number;
-}
 
 export class SetFilter extends BaseFilter <string, ISetFilterParams, string[]> {
     private model: SetFilterModel;
@@ -41,6 +29,8 @@ export class SetFilter extends BaseFilter <string, ISetFilterParams, string[]> {
         super();
     }
 
+    public customInit(){}
+
     modelFromFloatingFilter(from: string): string[] {
         return [from];
     }
@@ -55,7 +45,7 @@ export class SetFilter extends BaseFilter <string, ISetFilterParams, string[]> {
 
         this.virtualList.setComponentCreator(this.createSetListItem.bind(this));
 
-        this.model = new SetFilterModel(this.filterParams.colDef, this.filterParams.rowModel, this.filterParams.valueGetter, this.filterParams.doesRowPassOtherFilter, this.suppressSorting);
+        this.model = new SetFilterModel(this.filterParams.colDef, this.filterParams.rowModel, this.filterParams.valueGetter, this.filterParams.doesRowPassOtherFilter, this.filterParams.suppressSorting);
         this.virtualList.setModel(new ModelWrapper(this.model));
         _.setVisible(<HTMLElement>this.getGui().querySelector('#ag-mini-filter'), !this.filterParams.suppressMiniFilter);
 
@@ -201,6 +191,7 @@ export class SetFilter extends BaseFilter <string, ISetFilterParams, string[]> {
 
     public setMiniFilter(newMiniFilter: any): void {
         this.model.setMiniFilter(newMiniFilter);
+        this.eMiniFilter.value = this.model.getMiniFilter();
     }
 
     public getMiniFilter() {
@@ -262,7 +253,9 @@ export class SetFilter extends BaseFilter <string, ISetFilterParams, string[]> {
     }
 
     public resetState (){
-        this.model.setModel(null);
+        this.setMiniFilter(null);
+        this.model.setModel(null, true);
+        this.selectEverything();
     }
 
 }

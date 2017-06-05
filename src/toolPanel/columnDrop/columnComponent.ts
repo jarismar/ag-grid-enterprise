@@ -137,7 +137,7 @@ export class ColumnComponent extends Component {
 
         var virtualList = new VirtualList();
 
-        var rows = this.aggFuncService.getFuncNames();
+        var rows = this.aggFuncService.getFuncNames(this.column);
 
         virtualList.setModel({
             getRow: function(index: number) { return rows[index]; },
@@ -167,9 +167,11 @@ export class ColumnComponent extends Component {
         virtualList.setComponentCreator(this.createAggSelect.bind(this, hidePopup));
 
         this.popupService.positionPopupUnderComponent({
+            type: 'aggFuncSelect',
             eventSource: this.getGui(),
             ePopup: ePopup,
-            keepWithinBounds: true
+            keepWithinBounds: true,
+            column: this.column
         });
 
         virtualList.refresh();

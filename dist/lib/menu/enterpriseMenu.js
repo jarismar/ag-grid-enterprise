@@ -1,4 +1,4 @@
-// ag-grid-enterprise v8.2.0
+// ag-grid-enterprise v10.0.1
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -22,6 +22,8 @@ var EnterpriseMenuFactory = (function () {
         var _this = this;
         this.showMenu(column, function (menu) {
             _this.popupService.positionPopupUnderMouseEvent({
+                column: column,
+                type: 'columnMenu',
                 mouseEvent: mouseEvent,
                 ePopup: menu.getGui()
             });
@@ -33,7 +35,10 @@ var EnterpriseMenuFactory = (function () {
     EnterpriseMenuFactory.prototype.showMenuAfterButtonClick = function (column, eventSource, defaultTab) {
         var _this = this;
         this.showMenu(column, function (menu) {
-            _this.popupService.positionPopupUnderComponent({ eventSource: eventSource,
+            _this.popupService.positionPopupUnderComponent({
+                column: column,
+                type: 'columnMenu',
+                eventSource: eventSource,
                 ePopup: menu.getGui(),
                 nudgeX: -9,
                 nudgeY: -26,
@@ -127,7 +132,6 @@ var EnterpriseMenu = (function () {
         this.showTab(this.initialSelection);
     };
     EnterpriseMenu.prototype.showTab = function (toShow) {
-        console.log('showing : ' + toShow + ' - ' + this.tabItemFilter);
         if (this.tabItemColumns && toShow === EnterpriseMenu.TAB_COLUMNS) {
             this.tabbedLayout.showItem(this.tabItemColumns);
         }

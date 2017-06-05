@@ -1,19 +1,5 @@
-// ag-grid-enterprise v8.2.0
-import { IFilterParams, IDoesFilterPassParams, ICellRendererComp, ICellRendererFunc, BaseFilter } from "ag-grid/main";
-export interface ISetFilterParams extends IFilterParams {
-    suppressRemoveEntries?: boolean;
-    values?: any;
-    cellHeight: number;
-    apply: boolean;
-    suppressSorting: boolean;
-    cellRenderer: {
-        new (): ICellRendererComp;
-    } | ICellRendererFunc | string;
-    newRowsAction: string;
-    suppressMiniFilter: boolean;
-    selectAllOnMiniFilter: boolean;
-    comparator?: (a: any, b: any) => number;
-}
+// ag-grid-enterprise v10.0.1
+import { IDoesFilterPassParams, BaseFilter, ISetFilterParams } from "ag-grid/main";
 export declare class SetFilter extends BaseFilter<string, ISetFilterParams, string[]> {
     private model;
     private suppressSorting;
@@ -21,6 +7,7 @@ export declare class SetFilter extends BaseFilter<string, ISetFilterParams, stri
     private eMiniFilter;
     private virtualList;
     constructor();
+    customInit(): void;
     modelFromFloatingFilter(from: string): string[];
     initialiseFilterBodyUi(): void;
     refreshFilterBodyUi(): void;
