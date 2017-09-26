@@ -1,6 +1,5 @@
 import {
     Utils,
-    SvgFactory,
     Autowired,
     ColumnController,
     EventService,
@@ -10,11 +9,12 @@ import {
     GridOptionsWrapper,
     PostConstruct,
     Events,
-    Column
+    Column,
+    ColumnValueChangeRequestEvent,
+    ColumnApi,
+    GridApi
 } from "ag-grid/main";
 import {AbstractColumnDropPanel} from "./abstractColumnDropPanel";
-
-var svgFactory = SvgFactory.getInstance();
 
 export class ValuesColumnPanel extends AbstractColumnDropPanel {
 
@@ -25,6 +25,8 @@ export class ValuesColumnPanel extends AbstractColumnDropPanel {
     @Autowired('context') private context: Context;
     @Autowired('loggerFactory') private loggerFactory: LoggerFactory;
     @Autowired('dragAndDropService') private dragAndDropService: DragAndDropService;
+    @Autowired('columnApi') private columnApi: ColumnApi;
+    @Autowired('gridApi') private gridApi: GridApi;
 
     constructor(horizontal: boolean) {
         super(horizontal, true, 'values');
@@ -40,13 +42,13 @@ export class ValuesColumnPanel extends AbstractColumnDropPanel {
             dragAndDropService: this.dragAndDropService
         });
 
-        var localeTextFunc = this.gridOptionsWrapper.getLocaleTextFunc();
-        var emptyMessage = localeTextFunc('pivotColumnsEmptyMessage', 'Drag here to aggregate');
-        var title = localeTextFunc('values', 'Values');
+        let localeTextFunc = this.gridOptionsWrapper.getLocaleTextFunc();
+        let emptyMessage = localeTextFunc('valueColumnsEmptyMessage', 'Drag here to aggregate');
+        let title = localeTextFunc('values', 'Values');
 
         super.init({
             dragAndDropIcon: DragAndDropService.ICON_AGGREGATE,
-            icon: Utils.createIconNoSpan('valuePanel', this.gridOptionsWrapper, null, svgFactory.createAggregationIcon),
+            icon: Utils.createIconNoSpan('valuePanel', this.gridOptionsWrapper, null),
             emptyMessage: emptyMessage,
             title: title
         });
@@ -64,14 +66,20 @@ export class ValuesColumnPanel extends AbstractColumnDropPanel {
         // we never allow grouping of secondary columns
         if (!column.isPrimary()) { return false; }
 
-        var columnValue = column.isAllowValue();
-        var columnNotValue= !column.isValueActive();
+        let columnValue = column.isAllowValue();
+        let columnNotValue= !column.isValueActive();
         return columnValue && columnNotValue;
     }
 
     protected updateColumns(columns: Column[]): void {
         if (this.gridOptionsWrapper.isFunctionsPassive()) {
-            this.eventService.dispatchEvent(Events.EVENT_COLUMN_VALUE_CHANGE_REQUEST, {columns: columns} );
+            let event: ColumnValueChangeRequestEvent = {
+                type: Events.EVENT_COLUMN_VALUE_CHANGE_REQUEST,
+                columns: columns,
+                api: this.gridApi,
+                columnApi: this.columnApi
+            };
+            this.eventService.dispatchEvent(event);
         } else {
             this.columnController.setValueColumns(columns);
         }

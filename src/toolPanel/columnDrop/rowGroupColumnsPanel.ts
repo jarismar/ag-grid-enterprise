@@ -1,5 +1,4 @@
 import {
-    SvgFactory,
     Autowired,
     ColumnController,
     EventService,
@@ -10,11 +9,12 @@ import {
     PostConstruct,
     Utils,
     Events,
-    Column
+    Column,
+    ColumnRowGroupChangeRequestEvent,
+    ColumnApi,
+    GridApi
 } from "ag-grid/main";
 import {AbstractColumnDropPanel} from "./abstractColumnDropPanel";
-
-var svgFactory = SvgFactory.getInstance();
 
 export class RowGroupColumnsPanel extends AbstractColumnDropPanel {
 
@@ -25,6 +25,8 @@ export class RowGroupColumnsPanel extends AbstractColumnDropPanel {
     @Autowired('context') private context:Context;
     @Autowired('loggerFactory') private loggerFactory:LoggerFactory;
     @Autowired('dragAndDropService') private dragAndDropService:DragAndDropService;
+    @Autowired('columnApi') private columnApi: ColumnApi;
+    @Autowired('gridApi') private gridApi: GridApi;
 
     constructor(horizontal:boolean) {
         super(horizontal, false, 'row-group');
@@ -40,13 +42,13 @@ export class RowGroupColumnsPanel extends AbstractColumnDropPanel {
             dragAndDropService: this.dragAndDropService
         });
 
-        var localeTextFunc = this.gridOptionsWrapper.getLocaleTextFunc();
-        var emptyMessage = localeTextFunc('rowGroupColumnsEmptyMessage', 'Drag here to set row groups');
-        var title = localeTextFunc('groups', 'Row Groups');
+        let localeTextFunc = this.gridOptionsWrapper.getLocaleTextFunc();
+        let emptyMessage = localeTextFunc('rowGroupColumnsEmptyMessage', 'Drag here to set row groups');
+        let title = localeTextFunc('groups', 'Row Groups');
 
         super.init({
             dragAndDropIcon: DragAndDropService.ICON_GROUP,
-            icon: Utils.createIconNoSpan('rowGroupPanel', this.gridOptionsWrapper, null, svgFactory.createGroupIcon),
+            icon: Utils.createIconNoSpan('rowGroupPanel', this.gridOptionsWrapper, null),
             emptyMessage: emptyMessage,
             title: title
         });
@@ -60,14 +62,20 @@ export class RowGroupColumnsPanel extends AbstractColumnDropPanel {
         // we never allow grouping of secondary columns
         if (!column.isPrimary()) { return false; }
 
-        var columnGroupable = column.isAllowRowGroup();
-        var columnNotAlreadyGrouped = !column.isRowGroupActive();
+        let columnGroupable = column.isAllowRowGroup();
+        let columnNotAlreadyGrouped = !column.isRowGroupActive();
         return columnGroupable && columnNotAlreadyGrouped;
     }
 
     protected updateColumns(columns:Column[]) {
         if (this.gridOptionsWrapper.isFunctionsPassive()) {
-            this.eventService.dispatchEvent(Events.EVENT_COLUMN_ROW_GROUP_CHANGE_REQUEST, {columns: columns});
+            let event: ColumnRowGroupChangeRequestEvent = {
+                type: Events.EVENT_COLUMN_ROW_GROUP_CHANGE_REQUEST,
+                columns: columns,
+                api: this.gridApi,
+                columnApi: this.columnApi
+            };
+            this.eventService.dispatchEvent(event);
         } else {
             this.columnController.setRowGroupColumns(columns);
         }

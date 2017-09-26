@@ -1,4 +1,4 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v13.2.0
 import { ColDef } from "ag-grid/main";
 export declare class SetFilterModel {
     private colDef;
@@ -12,13 +12,19 @@ export declare class SetFilterModel {
     private selectedValuesCount;
     private selectedValuesMap;
     private suppressSorting;
+    private formatter;
     private showingAvailableOnly;
     private usingProvidedSet;
     private doesRowPassOtherFilters;
     constructor(colDef: ColDef, rowModel: any, valueGetter: any, doesRowPassOtherFilters: any, suppressSorting: boolean);
     refreshAfterNewRowsLoaded(keepSelection: any, isSelectAll: boolean): void;
+    refreshValues(valuesToUse: string[], keepSelection: any, isSelectAll: boolean): void;
+    private refreshSelection(keepSelection, isSelectAll);
     refreshAfterAnyFilterChanged(): void;
     private createAllUniqueValues();
+    setUsingProvidedSet(value: boolean): void;
+    private setValues(valuesToUse);
+    private extractValuesToUse();
     private createAvailableUniqueValues();
     private sortValues(values);
     private getUniqueValues(filterOutNotAvailable);

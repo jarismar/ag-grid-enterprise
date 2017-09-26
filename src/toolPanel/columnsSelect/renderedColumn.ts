@@ -1,22 +1,27 @@
 import {
-    Context,
-    DragSourceType,
+    AgCheckbox,
     Autowired,
-    Component,
+    Column,
+    ColumnApi,
     ColumnController,
-    DragAndDropService,
+    ColumnPivotChangeRequestEvent,
+    ColumnRowGroupChangeRequestEvent,
+    ColumnValueChangeRequestEvent,
+    Component,
+    Context,
     CssClassApplier,
+    DragAndDropService,
+    DragSource,
+    DragSourceType,
+    Events,
+    EventService,
+    GridApi,
     GridOptionsWrapper,
     GridPanel,
-    Column,
-    Events,
-    TouchListener,
-    QuerySelector,
     PostConstruct,
-    EventService,
-    Utils,
-    AgCheckbox,
-    DragSource
+    QuerySelector,
+    TouchListener,
+    Utils
 } from "ag-grid/main";
 
 export class RenderedColumn extends Component {
@@ -34,6 +39,8 @@ export class RenderedColumn extends Component {
     @Autowired('dragAndDropService') private dragAndDropService: DragAndDropService;
     @Autowired('gridPanel') private gridPanel: GridPanel;
     @Autowired('context') private context: Context;
+    @Autowired('columnApi') private columnApi: ColumnApi;
+    @Autowired('gridApi') private gridApi: GridApi;
 
     @QuerySelector('.ag-column-select-label') private eText: HTMLElement;
     @QuerySelector('.ag-column-select-indent') private eIndent: HTMLElement;
@@ -84,11 +91,11 @@ export class RenderedColumn extends Component {
         this.addDestroyableEventListener(this.eText, 'click', this.onClick.bind(this));
 
         this.addTap();
-        CssClassApplier.addToolPanelClassesFromColDef(this.column.getColDef(), this.getGui(), this.gridOptionsWrapper, this.column, null);
+        CssClassApplier.addToolPanelClassesFromColDef(this.column.getColDef(), this.getHtmlElement(), this.gridOptionsWrapper, this.column, null);
     }
 
     private addTap(): void {
-        let touchListener = new TouchListener(this.getGui());
+        let touchListener = new TouchListener(this.getHtmlElement());
         this.addDestroyableEventListener(touchListener, TouchListener.EVENT_TAP, this.onClick.bind(this));
         this.addDestroyFunc( touchListener.destroy.bind(touchListener) );
     }
@@ -119,16 +126,22 @@ export class RenderedColumn extends Component {
     }
 
     private actionUnCheckedPivotMode(): void {
-        var functionPassive = this.gridOptionsWrapper.isFunctionsPassive();
-        var column = this.column;
-        var columnController = this.columnController;
+        let functionPassive = this.gridOptionsWrapper.isFunctionsPassive();
+        let column = this.column;
+        let columnController = this.columnController;
 
         // remove pivot if column is pivoted
         if (column.isPivotActive()) {
             if (functionPassive) {
                 let copyOfPivotColumns = this.columnController.getPivotColumns().slice();
                 copyOfPivotColumns.push(column);
-                this.eventService.dispatchEvent(Events.EVENT_COLUMN_PIVOT_CHANGE_REQUEST, {columns: copyOfPivotColumns});
+                let event: ColumnPivotChangeRequestEvent = {
+                    type: Events.EVENT_COLUMN_PIVOT_CHANGE_REQUEST,
+                    columns: copyOfPivotColumns,
+                    api: this.gridApi,
+                    columnApi: this.columnApi
+                };
+                this.eventService.dispatchEvent(event);
             } else {
                 columnController.removePivotColumn(column);
             }
@@ -138,7 +151,13 @@ export class RenderedColumn extends Component {
             if (functionPassive) {
                 let copyOfValueColumns = this.columnController.getValueColumns().slice();
                 copyOfValueColumns.push(column);
-                this.eventService.dispatchEvent(Events.EVENT_COLUMN_VALUE_CHANGE_REQUEST, {columns: copyOfValueColumns});
+                let event: ColumnValueChangeRequestEvent = {
+                    type: Events.EVENT_COLUMN_VALUE_CHANGE_REQUEST,
+                    columns: copyOfValueColumns,
+                    api: this.gridApi,
+                    columnApi: this.columnApi
+                };
+                this.eventService.dispatchEvent(event);
             } else {
                 columnController.removeValueColumn(column);
             }
@@ -148,7 +167,13 @@ export class RenderedColumn extends Component {
             if (functionPassive) {
                 let copyOfRowGroupColumns = this.columnController.getRowGroupColumns().slice();
                 copyOfRowGroupColumns.push(column);
-                this.eventService.dispatchEvent(Events.EVENT_COLUMN_ROW_GROUP_CHANGE_REQUEST, {columns: copyOfRowGroupColumns});
+                let event: ColumnRowGroupChangeRequestEvent = {
+                    type: Events.EVENT_COLUMN_ROW_GROUP_CHANGE_REQUEST,
+                    columns: copyOfRowGroupColumns,
+                    api: this.gridApi,
+                    columnApi: this.columnApi
+                };
+                this.eventService.dispatchEvent(event);
             } else {
                 columnController.removeRowGroupColumn(column);
             }
@@ -167,7 +192,13 @@ export class RenderedColumn extends Component {
             if (functionPassive) {
                 let copyOfValueColumns = this.columnController.getValueColumns().slice();
                 Utils.removeFromArray(copyOfValueColumns, column);
-                this.eventService.dispatchEvent(Events.EVENT_COLUMN_VALUE_CHANGE_REQUEST, {columns: copyOfValueColumns});
+                let event: ColumnValueChangeRequestEvent = {
+                    type: Events.EVENT_COLUMN_VALUE_CHANGE_REQUEST,
+                    api: this.gridApi,
+                    columnApi: this.columnApi,
+                    columns: copyOfValueColumns
+                };
+                this.eventService.dispatchEvent(event);
             } else {
                 this.columnController.addValueColumn(column);
             }
@@ -175,7 +206,13 @@ export class RenderedColumn extends Component {
             if (functionPassive) {
                 let copyOfRowGroupColumns = this.columnController.getRowGroupColumns().slice();
                 Utils.removeFromArray(copyOfRowGroupColumns, column);
-                this.eventService.dispatchEvent(Events.EVENT_COLUMN_ROW_GROUP_CHANGE_REQUEST, {columns: copyOfRowGroupColumns});
+                let event: ColumnRowGroupChangeRequestEvent = {
+                    type: Events.EVENT_COLUMN_ROW_GROUP_CHANGE_REQUEST,
+                    api: this.gridApi,
+                    columnApi: this.columnApi,
+                    columns: copyOfRowGroupColumns
+                };
+                this.eventService.dispatchEvent(event);
             } else {
                 this.columnController.addRowGroupColumn(column);
             }
@@ -183,7 +220,13 @@ export class RenderedColumn extends Component {
             if (functionPassive) {
                 let copyOfPivotColumns = this.columnController.getPivotColumns().slice();
                 Utils.removeFromArray(copyOfPivotColumns, column);
-                this.eventService.dispatchEvent(Events.EVENT_COLUMN_PIVOT_CHANGE_REQUEST, {columns: copyOfPivotColumns});
+                let event: ColumnPivotChangeRequestEvent = {
+                    type: Events.EVENT_COLUMN_PIVOT_CHANGE_REQUEST,
+                    api: this.gridApi,
+                    columnApi: this.columnApi,
+                    columns: copyOfPivotColumns
+                };
+                this.eventService.dispatchEvent(event);
             } else {
                 this.columnController.addPivotColumn(column);
             }
@@ -191,22 +234,31 @@ export class RenderedColumn extends Component {
     }
 
     private addDragSource(): void {
-        var dragSource: DragSource = {
+        let dragSource: DragSource = {
             type: DragSourceType.ToolPanel,
-            eElement: this.getGui(),
+            eElement: this.getHtmlElement(),
             dragItemName: this.displayName,
-            dragItem: [this.column]
+            dragItemCallback: () => this.createDragItem()
         };
         this.dragAndDropService.addDragSource(dragSource, true);
         this.addDestroyFunc( ()=> this.dragAndDropService.removeDragSource(dragSource) );
     }
 
+    private createDragItem() {
+        let visibleState: { [key: string]: boolean } = {};
+        visibleState[this.column.getId()] = this.column.isVisible();
+        return {
+            columns: [this.column],
+            visibleState: visibleState
+        };
+    }
+
     private onColumnStateChanged(): void {
         this.processingColumnStateChange = true;
-        var isPivotMode = this.columnController.isPivotMode();
+        let isPivotMode = this.columnController.isPivotMode();
         if (isPivotMode) {
             // if reducing, checkbox means column is one of pivot, value or group
-            var anyFunctionActive = this.column.isAnyFunctionActive();
+            let anyFunctionActive = this.column.isAnyFunctionActive();
             this.cbSelect.setSelected(anyFunctionActive);
         } else {
             // if not reducing, the checkbox tells us if column is visible or not
@@ -214,7 +266,7 @@ export class RenderedColumn extends Component {
         }
 
         // read only in pivot mode if:
-        var checkboxReadOnly = isPivotMode
+        let checkboxReadOnly = isPivotMode
             // a) gui is not allowed make any changes or
             && (this.gridOptionsWrapper.isFunctionsReadOnly()
             // b) column is not allow any functions on it
@@ -222,7 +274,7 @@ export class RenderedColumn extends Component {
 
         this.cbSelect.setReadOnly(checkboxReadOnly);
 
-        var checkboxPassive = isPivotMode && this.gridOptionsWrapper.isFunctionsPassive();
+        let checkboxPassive = isPivotMode && this.gridOptionsWrapper.isFunctionsPassive();
         this.cbSelect.setPassive(checkboxPassive);
 
         this.processingColumnStateChange = false;

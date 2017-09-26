@@ -1,4 +1,4 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v13.2.0
 import { Component, OriginalColumnGroup } from "ag-grid/main";
 export declare class RenderedGroup extends Component {
     private static TEMPLATE;
@@ -22,6 +22,7 @@ export declare class RenderedGroup extends Component {
     init(): void;
     private addVisibilityListenersToAllChildren();
     private addDragSource();
+    private createDragItem();
     private setupExpandContract();
     private onClick();
     private onCheckboxChanged();

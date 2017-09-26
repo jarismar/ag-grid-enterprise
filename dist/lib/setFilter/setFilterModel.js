@@ -1,6 +1,8 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v13.2.0
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var main_1 = require("ag-grid/main");
+var main_2 = require("ag-grid/main");
 // we cannot have 'null' as a key in a JavaScript map,
 // it needs to be a string. so we use this string for
 // storing null values.
@@ -31,12 +33,23 @@ var SetFilterModel = (function () {
         // the length of the array is thousands of records long
         this.selectedValuesMap = {};
         this.selectEverything();
+        this.formatter = this.filterParams.textFormatter ? this.filterParams.textFormatter : main_2.TextFilter.DEFAULT_FORMATTER;
     }
     // if keepSelection not set will always select all filters
     // if keepSelection set will keep current state of selected filters
     //    unless selectAll chosen in which case will select all
     SetFilterModel.prototype.refreshAfterNewRowsLoaded = function (keepSelection, isSelectAll) {
         this.createAllUniqueValues();
+        this.refreshSelection(keepSelection, isSelectAll);
+    };
+    // if keepSelection not set will always select all filters
+    // if keepSelection set will keep current state of selected filters
+    //    unless selectAll chosen in which case will select all
+    SetFilterModel.prototype.refreshValues = function (valuesToUse, keepSelection, isSelectAll) {
+        this.setValues(valuesToUse);
+        this.refreshSelection(keepSelection, isSelectAll);
+    };
+    SetFilterModel.prototype.refreshSelection = function (keepSelection, isSelectAll) {
         this.createAvailableUniqueValues();
         var oldModel = Object.keys(this.selectedValuesMap);
         this.selectedValuesMap = {};
@@ -55,16 +68,28 @@ var SetFilterModel = (function () {
         }
     };
     SetFilterModel.prototype.createAllUniqueValues = function () {
-        if (this.usingProvidedSet) {
-            this.allUniqueValues = main_1.Utils.toStrings(this.filterParams.values);
-        }
-        else {
-            var uniqueValuesAsAnyObjects = this.getUniqueValues(false);
-            this.allUniqueValues = main_1.Utils.toStrings(uniqueValuesAsAnyObjects);
-        }
+        var valuesToUse = this.extractValuesToUse();
+        this.setValues(valuesToUse);
+    };
+    SetFilterModel.prototype.setUsingProvidedSet = function (value) {
+        this.usingProvidedSet = value;
+    };
+    SetFilterModel.prototype.setValues = function (valuesToUse) {
+        this.allUniqueValues = valuesToUse;
         if (!this.suppressSorting) {
             this.sortValues(this.allUniqueValues);
         }
+    };
+    SetFilterModel.prototype.extractValuesToUse = function () {
+        var valuesToUse;
+        if (this.usingProvidedSet) {
+            valuesToUse = main_1.Utils.toStrings(this.filterParams.values);
+        }
+        else {
+            var uniqueValuesAsAnyObjects = this.getUniqueValues(false);
+            valuesToUse = main_1.Utils.toStrings(uniqueValuesAsAnyObjects);
+        }
+        return valuesToUse;
     };
     SetFilterModel.prototype.createAvailableUniqueValues = function () {
         var dontCheckAvailableValues = !this.showingAvailableOnly || this.usingProvidedSet;
@@ -149,11 +174,14 @@ var SetFilterModel = (function () {
         }
         // if filter present, we filter down the list
         this.displayedValues = [];
-        var miniFilterUpperCase = this.miniFilter.toUpperCase();
+        var miniFilterFormatted = this.formatter(this.miniFilter);
         for (var i = 0, l = this.availableUniqueValues.length; i < l; i++) {
             var filteredValue = this.availableUniqueValues[i];
-            if (filteredValue !== null && filteredValue.toString().toUpperCase().indexOf(miniFilterUpperCase) >= 0) {
-                this.displayedValues.push(filteredValue);
+            if (filteredValue) {
+                var filteredValueFormatted = this.formatter(filteredValue.toString());
+                if (filteredValueFormatted !== null && filteredValueFormatted.indexOf(miniFilterFormatted) >= 0) {
+                    this.displayedValues.push(filteredValue);
+                }
             }
         }
     };
@@ -268,7 +296,8 @@ var SetFilterModel = (function () {
         if (model && !isSelectAll) {
             this.selectNothing();
             for (var i = 0; i < model.length; i++) {
-                var value = model[i];
+                var rawValue = model[i];
+                var value = this.keyToValue(rawValue);
                 if (this.allUniqueValues.indexOf(value) >= 0) {
                     this.selectValue(value);
                 }

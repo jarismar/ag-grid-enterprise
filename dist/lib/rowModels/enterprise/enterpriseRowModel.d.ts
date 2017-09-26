@@ -1,5 +1,5 @@
-// ag-grid-enterprise v10.0.1
-import { BeanStub, IEnterpriseDatasource, RowNode, IEnterpriseRowModel } from "ag-grid";
+// ag-grid-enterprise v13.2.0
+import { BeanStub, IEnterpriseDatasource, IEnterpriseRowModel, RowNode, RowBounds } from "ag-grid";
 export declare class EnterpriseRowModel extends BeanStub implements IEnterpriseRowModel {
     private gridOptionsWrapper;
     private eventService;
@@ -7,6 +7,8 @@ export declare class EnterpriseRowModel extends BeanStub implements IEnterpriseR
     private columnController;
     private filterManager;
     private sortController;
+    private gridApi;
+    private columnApi;
     private rootNode;
     private datasource;
     private rowHeight;
@@ -21,6 +23,8 @@ export declare class EnterpriseRowModel extends BeanStub implements IEnterpriseR
     private onSortChanged();
     private onValueChanged();
     private onColumnRowGroupChanged();
+    private onColumnPivotChanged();
+    private onPivotModeChanged();
     private onRowGroupOpened(event);
     private reset();
     private createNewRowNodeBlockLoader();
@@ -29,16 +33,15 @@ export declare class EnterpriseRowModel extends BeanStub implements IEnterpriseR
     private toValueObjects(columns);
     private createCacheParams();
     private createNodeCache(rowNode);
-    getRowBounds(index: number): {
-        rowTop: number;
-        rowHeight: number;
-    };
     private onCacheUpdated();
-    updateRowIndexes(): void;
+    updateRowIndexesAndBounds(): void;
+    private setDisplayIndexes(cache);
+    private resetRowTops(cache);
     getRow(index: number): RowNode;
     getPageFirstRow(): number;
     getPageLastRow(): number;
     getRowCount(): number;
+    getRowBounds(index: number): RowBounds;
     getRowIndexAtPixel(pixel: number): number;
     getCurrentPageHeight(): number;
     isEmpty(): boolean;
@@ -46,9 +49,7 @@ export declare class EnterpriseRowModel extends BeanStub implements IEnterpriseR
     getType(): string;
     forEachNode(callback: (rowNode: RowNode) => void): void;
     purgeCache(route?: string[]): void;
+    getNodesInRangeForSelection(firstInRange: RowNode, lastInRange: RowNode): RowNode[];
     getBlockState(): any;
-    insertItemsAtIndex(index: number, items: any[], skipRefresh: boolean): void;
-    removeItems(rowNodes: RowNode[], skipRefresh: boolean): void;
-    addItems(item: any[], skipRefresh: boolean): void;
     isRowPresent(rowNode: RowNode): boolean;
 }

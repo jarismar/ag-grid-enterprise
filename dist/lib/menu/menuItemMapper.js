@@ -1,4 +1,4 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v13.2.0
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -9,10 +9,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+Object.defineProperty(exports, "__esModule", { value: true });
 var ag_grid_1 = require("ag-grid");
 var clipboardService_1 = require("../clipboardService");
 var aggFuncService_1 = require("../aggregation/aggFuncService");
-var svgFactory = ag_grid_1.SvgFactory.getInstance();
 var MenuItemMapper = (function () {
     function MenuItemMapper() {
     }
@@ -44,7 +44,7 @@ var MenuItemMapper = (function () {
         switch (key) {
             case 'pinSubMenu': return {
                 name: localeTextFunc('pinColumn', 'Pin Column'),
-                icon: ag_grid_1.Utils.createIconNoSpan('menuPin', this.gridOptionsWrapper, null, svgFactory.createPinIcon),
+                icon: ag_grid_1.Utils.createIconNoSpan('menuPin', this.gridOptionsWrapper, null),
                 subMenu: ['pinLeft', 'pinRight', 'clearPinned']
             };
             case 'pinLeft': return {
@@ -64,7 +64,7 @@ var MenuItemMapper = (function () {
             };
             case 'valueAggSubMenu': return {
                 name: localeTextFunc('valueAggregation', 'Value Aggregation'),
-                icon: ag_grid_1.Utils.createIconNoSpan('menuValue', this.gridOptionsWrapper, null, svgFactory.createAggregationIcon),
+                icon: ag_grid_1.Utils.createIconNoSpan('menuValue', this.gridOptionsWrapper, null),
                 subMenu: this.createAggregationSubMenu(column)
             };
             case 'autoSizeThis': return {
@@ -76,14 +76,14 @@ var MenuItemMapper = (function () {
                 action: function () { return _this.columnController.autoSizeAllColumns(); }
             };
             case 'rowGroup': return {
-                name: localeTextFunc('groupBy', 'Group by') + ' ' + column.getColDef().headerName,
+                name: localeTextFunc('groupBy', 'Group by') + ' ' + this.columnController.getDisplayNameForColumn(column, 'header'),
                 action: function () { return _this.columnController.addRowGroupColumn(column); },
-                icon: ag_grid_1.Utils.createIconNoSpan('menuAddRowGroup', this.gridOptionsWrapper, null, svgFactory.createGroupIcon12)
+                icon: ag_grid_1.Utils.createIconNoSpan('menuAddRowGroup', this.gridOptionsWrapper, null)
             };
             case 'rowUnGroup': return {
-                name: localeTextFunc('ungroupBy', 'Un-Group by') + ' ' + column.getColDef().headerName,
+                name: localeTextFunc('ungroupBy', 'Un-Group by') + ' ' + this.columnController.getDisplayNameForColumn(column, 'header'),
                 action: function () { return _this.columnController.removeRowGroupColumn(column); },
-                icon: ag_grid_1.Utils.createIconNoSpan('menuRemoveRowGroup', this.gridOptionsWrapper, null, svgFactory.createGroupIcon12)
+                icon: ag_grid_1.Utils.createIconNoSpan('menuRemoveRowGroup', this.gridOptionsWrapper, null)
             };
             case 'resetColumns': return {
                 name: localeTextFunc('resetColumns', 'Reset Columns'),
@@ -100,20 +100,20 @@ var MenuItemMapper = (function () {
             case 'copy': return {
                 name: localeTextFunc('copy', 'Copy'),
                 shortcut: localeTextFunc('ctrlC', 'Ctrl+C'),
-                icon: ag_grid_1.Utils.createIconNoSpan('clipboardCopy', this.gridOptionsWrapper, null, svgFactory.createCopyIcon),
+                icon: ag_grid_1.Utils.createIconNoSpan('clipboardCopy', this.gridOptionsWrapper, null),
                 action: function () { return _this.clipboardService.copyToClipboard(false); }
             };
             case 'copyWithHeaders': return {
                 name: localeTextFunc('copyWithHeaders', 'Copy with Headers'),
                 // shortcut: localeTextFunc('ctrlC','Ctrl+C'),
-                icon: ag_grid_1.Utils.createIconNoSpan('clipboardCopy', this.gridOptionsWrapper, null, svgFactory.createCopyIcon),
+                icon: ag_grid_1.Utils.createIconNoSpan('clipboardCopy', this.gridOptionsWrapper, null),
                 action: function () { return _this.clipboardService.copyToClipboard(true); }
             };
             case 'paste': return {
                 name: localeTextFunc('paste', 'Paste'),
                 shortcut: localeTextFunc('ctrlV', 'Ctrl+V'),
                 disabled: true,
-                icon: ag_grid_1.Utils.createIconNoSpan('clipboardPaste', this.gridOptionsWrapper, null, svgFactory.createPasteIcon),
+                icon: ag_grid_1.Utils.createIconNoSpan('clipboardPaste', this.gridOptionsWrapper, null),
                 action: function () { return _this.clipboardService.pasteFromClipboard(); }
             };
             case 'toolPanel': return {
@@ -121,10 +121,18 @@ var MenuItemMapper = (function () {
                 checked: this.gridApi.isToolPanelShowing(),
                 action: function () { return _this.gridApi.showToolPanel(!_this.gridApi.isToolPanelShowing()); }
             };
-            case 'export': return {
-                name: localeTextFunc('export', 'Export'),
-                subMenu: ['csvExport', 'excelExport']
-            };
+            case 'export':
+                var exportSubMenuItems = [];
+                if (!this.gridOptionsWrapper.isSuppressCsvExport()) {
+                    exportSubMenuItems.push('csvExport');
+                }
+                if (!this.gridOptionsWrapper.isSuppressExcelExport()) {
+                    exportSubMenuItems.push('excelExport');
+                }
+                return {
+                    name: localeTextFunc('export', 'Export'),
+                    subMenu: exportSubMenuItems
+                };
             case 'csvExport': return {
                 name: localeTextFunc('csvExport', 'CSV Export'),
                 action: function () { return _this.gridApi.exportDataAsCsv({}); }
@@ -164,29 +172,29 @@ var MenuItemMapper = (function () {
         });
         return result;
     };
+    __decorate([
+        ag_grid_1.Autowired('gridOptionsWrapper'),
+        __metadata("design:type", ag_grid_1.GridOptionsWrapper)
+    ], MenuItemMapper.prototype, "gridOptionsWrapper", void 0);
+    __decorate([
+        ag_grid_1.Autowired('columnController'),
+        __metadata("design:type", ag_grid_1.ColumnController)
+    ], MenuItemMapper.prototype, "columnController", void 0);
+    __decorate([
+        ag_grid_1.Autowired('gridApi'),
+        __metadata("design:type", ag_grid_1.GridApi)
+    ], MenuItemMapper.prototype, "gridApi", void 0);
+    __decorate([
+        ag_grid_1.Autowired('clipboardService'),
+        __metadata("design:type", clipboardService_1.ClipboardService)
+    ], MenuItemMapper.prototype, "clipboardService", void 0);
+    __decorate([
+        ag_grid_1.Autowired('aggFuncService'),
+        __metadata("design:type", aggFuncService_1.AggFuncService)
+    ], MenuItemMapper.prototype, "aggFuncService", void 0);
+    MenuItemMapper = __decorate([
+        ag_grid_1.Bean('menuItemMapper')
+    ], MenuItemMapper);
     return MenuItemMapper;
 }());
-__decorate([
-    ag_grid_1.Autowired('gridOptionsWrapper'),
-    __metadata("design:type", ag_grid_1.GridOptionsWrapper)
-], MenuItemMapper.prototype, "gridOptionsWrapper", void 0);
-__decorate([
-    ag_grid_1.Autowired('columnController'),
-    __metadata("design:type", ag_grid_1.ColumnController)
-], MenuItemMapper.prototype, "columnController", void 0);
-__decorate([
-    ag_grid_1.Autowired('gridApi'),
-    __metadata("design:type", ag_grid_1.GridApi)
-], MenuItemMapper.prototype, "gridApi", void 0);
-__decorate([
-    ag_grid_1.Autowired('clipboardService'),
-    __metadata("design:type", clipboardService_1.ClipboardService)
-], MenuItemMapper.prototype, "clipboardService", void 0);
-__decorate([
-    ag_grid_1.Autowired('aggFuncService'),
-    __metadata("design:type", aggFuncService_1.AggFuncService)
-], MenuItemMapper.prototype, "aggFuncService", void 0);
-MenuItemMapper = __decorate([
-    ag_grid_1.Bean('menuItemMapper')
-], MenuItemMapper);
 exports.MenuItemMapper = MenuItemMapper;

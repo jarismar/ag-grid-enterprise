@@ -1,5 +1,6 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v13.2.0
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var main_1 = require("ag-grid/main");
 var enterpriseMenu_1 = require("./menu/enterpriseMenu");
 var rangeController_1 = require("./rangeController");

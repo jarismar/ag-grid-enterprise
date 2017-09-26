@@ -1,6 +1,5 @@
 import {
     Utils,
-    SvgFactory,
     Autowired,
     ColumnController,
     EventService,
@@ -10,12 +9,15 @@ import {
     GridOptionsWrapper,
     PostConstruct,
     Events,
-    Column
+    Column,
+    Bean,
+    ColumnPivotChangeRequestEvent,
+    ColumnApi,
+    GridApi
 } from "ag-grid/main";
 import {AbstractColumnDropPanel} from "./abstractColumnDropPanel";
 
-var svgFactory = SvgFactory.getInstance();
-
+@Bean("pivotColumnsPanel")
 export class PivotColumnsPanel extends AbstractColumnDropPanel {
 
     @Autowired('columnController') private columnController: ColumnController;
@@ -25,6 +27,8 @@ export class PivotColumnsPanel extends AbstractColumnDropPanel {
     @Autowired('context') private context: Context;
     @Autowired('loggerFactory') private loggerFactory: LoggerFactory;
     @Autowired('dragAndDropService') private dragAndDropService: DragAndDropService;
+    @Autowired('columnApi') private columnApi: ColumnApi;
+    @Autowired('gridApi') private gridApi: GridApi;
 
     constructor(horizontal: boolean) {
         super(horizontal, false, 'pivot');
@@ -40,13 +44,13 @@ export class PivotColumnsPanel extends AbstractColumnDropPanel {
             dragAndDropService: this.dragAndDropService
         });
 
-        var localeTextFunc = this.gridOptionsWrapper.getLocaleTextFunc();
-        var emptyMessage = localeTextFunc('pivotColumnsEmptyMessage', 'Drag here to set column labels');
-        var title = localeTextFunc('pivots', 'Column Labels');
+        let localeTextFunc = this.gridOptionsWrapper.getLocaleTextFunc();
+        let emptyMessage = localeTextFunc('pivotColumnsEmptyMessage', 'Drag here to set column labels');
+        let title = localeTextFunc('pivots', 'Column Labels');
 
         super.init({
             dragAndDropIcon: DragAndDropService.ICON_GROUP,
-            icon: Utils.createIconNoSpan('pivotPanel', this.gridOptionsWrapper, null, svgFactory.createPivotIcon),
+            icon: Utils.createIconNoSpan('pivotPanel', this.gridOptionsWrapper, null),
             emptyMessage: emptyMessage,
             title: title
         });
@@ -64,7 +68,7 @@ export class PivotColumnsPanel extends AbstractColumnDropPanel {
     }
 
     private checkVisibility(): void {
-        var pivotMode = this.columnController.isPivotMode();
+        let pivotMode = this.columnController.isPivotMode();
 
         if (this.isHorizontal()) {
             // what we do for horizontal (ie the pivot panel at the top) depends
@@ -74,7 +78,7 @@ export class PivotColumnsPanel extends AbstractColumnDropPanel {
                     this.setVisible(pivotMode);
                     break;
                 case 'onlyWhenPivoting':
-                    var pivotActive = this.columnController.isPivotActive();
+                    let pivotActive = this.columnController.isPivotActive();
                     this.setVisible(pivotMode && pivotActive);
                     break;
                 default:
@@ -94,14 +98,20 @@ export class PivotColumnsPanel extends AbstractColumnDropPanel {
         // we never allow grouping of secondary columns
         if (!column.isPrimary()) { return false; }
 
-        var allowPivot = column.isAllowPivot();
-        var columnNotAlreadyPivoted = !column.isPivotActive();
+        let allowPivot = column.isAllowPivot();
+        let columnNotAlreadyPivoted = !column.isPivotActive();
         return allowPivot && columnNotAlreadyPivoted;
     }
 
     protected updateColumns(columns: Column[]): void {
         if (this.gridOptionsWrapper.isFunctionsPassive()) {
-            this.eventService.dispatchEvent(Events.EVENT_COLUMN_PIVOT_CHANGE_REQUEST, {columns: columns} );
+            let event: ColumnPivotChangeRequestEvent = {
+                type: Events.EVENT_COLUMN_PIVOT_CHANGE_REQUEST,
+                columns: columns,
+                api: this.gridApi,
+                columnApi: this.columnApi
+            };
+            this.eventService.dispatchEvent(event);
         } else {
             this.columnController.setPivotColumns(columns);
         }

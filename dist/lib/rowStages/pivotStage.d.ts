@@ -1,4 +1,4 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v13.2.0
 import { IRowNodeStage, StageExecuteParams, ColDef } from "ag-grid/main";
 export declare class PivotStage implements IRowNodeStage {
     private rowModel;
@@ -10,6 +10,7 @@ export declare class PivotStage implements IRowNodeStage {
     private pivotColumnGroupDefs;
     private pivotColumnDefs;
     private aggregationColumnsHashLastTime;
+    private aggregationFuncsHashLastTime;
     execute(params: StageExecuteParams): void;
     private executePivotOff();
     private executePivotOn(rootNode);

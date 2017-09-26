@@ -16,7 +16,8 @@ import {
     MenuItemDef,
     GridApi,
     IRowModel,
-    Constants
+    IComponent,
+    IAfterGuiAttachedParams
 } from "ag-grid";
 import {ClipboardService} from "../clipboardService";
 import {MenuItemComponent} from "./menuItemComponent";
@@ -36,21 +37,21 @@ export class ContextMenuFactory implements IContextMenuFactory {
     }
 
     private getMenuItems(node: RowNode, column: Column, value: any): (MenuItemDef|string)[] {
-        var defaultMenuOptions: string[];
+        let defaultMenuOptions: string[];
         if (Utils.exists(node)) {
             // if user clicks a cell
+            let anyExport:boolean = !this.gridOptionsWrapper.isSuppressExcelExport() || !this.gridOptionsWrapper.isSuppressCsvExport();
             defaultMenuOptions = ['copy','copyWithHeaders','paste','separator','toolPanel'];
-            // only put in the export if normal row model, other row models confuse things with export.
-            if (this.rowModel.getType()===Constants.ROW_MODEL_TYPE_NORMAL) {
-                defaultMenuOptions.push('export');
+            if (anyExport){
+                defaultMenuOptions.push('export')
             }
         } else {
             // if user clicks outside of a cell (eg below the rows, or not rows present)
             defaultMenuOptions = ['toolPanel'];
         }
         if (this.gridOptionsWrapper.getContextMenuItemsFunc()) {
-            var userFunc: GetContextMenuItems = this.gridOptionsWrapper.getContextMenuItemsFunc();
-            var params: GetContextMenuItemsParams = {
+            let userFunc: GetContextMenuItems = this.gridOptionsWrapper.getContextMenuItemsFunc();
+            let params: GetContextMenuItemsParams = {
                 node: node,
                 column: column,
                 value: value,
@@ -59,7 +60,7 @@ export class ContextMenuFactory implements IContextMenuFactory {
                 columnApi: this.gridOptionsWrapper.getColumnApi(),
                 context: this.gridOptionsWrapper.getContext()
             };
-            var menuItemsFromUser = userFunc(params);
+            let menuItemsFromUser = userFunc(params);
             return menuItemsFromUser;
         } else {
             return defaultMenuOptions;
@@ -68,18 +69,18 @@ export class ContextMenuFactory implements IContextMenuFactory {
 
     public showMenu(node: RowNode, column: Column, value: any, mouseEvent: MouseEvent): void {
 
-        var menuItems = this.getMenuItems(node, column, value);
+        let menuItems = this.getMenuItems(node, column, value);
 
         if (Utils.missingOrEmpty(menuItems)) { return; }
 
-        var menu = new ContextMenu(menuItems);
+        let menu = new ContextMenu(menuItems);
         this.context.wireBean(menu);
 
-        var eMenuGui =  menu.getGui();
+        let eMenuGui =  menu.getHtmlElement();
 
         // need to show filter before positioning, as only after filter
         // is visible can we find out what the width of it is
-        var hidePopup = this.popupService.addAsModalPopup(
+        let hidePopup = this.popupService.addAsModalPopup(
             eMenuGui,
             true,
             ()=> menu.destroy()
@@ -93,12 +94,19 @@ export class ContextMenuFactory implements IContextMenuFactory {
             ePopup: eMenuGui
         });
 
-        menu.afterGuiAttached(hidePopup);
+        menu.afterGuiAttached({
+            eComponent: eMenuGui,
+            hidePopupCallback: hidePopup
+        });
     }
 
 }
 
-class ContextMenu extends Component {
+export interface IContextMenuAfterGuiAttachedParams extends IAfterGuiAttachedParams {
+    hidePopupCallback: (event?: any)=>void;
+}
+
+class ContextMenu extends Component implements IComponent<any, IContextMenuAfterGuiAttachedParams>{
 
     @Autowired('context') private context: Context;
     @Autowired('clipboardService') private clipboardService: ClipboardService;
@@ -129,8 +137,9 @@ class ContextMenu extends Component {
         menuList.addEventListener(MenuItemComponent.EVENT_ITEM_SELECTED, this.destroy.bind(this));
     }
 
-    public afterGuiAttached(hidePopup: (event?: any)=>void): void {
-        this.addDestroyFunc(hidePopup);
+    public afterGuiAttached(params: IContextMenuAfterGuiAttachedParams): void {
+
+        this.addDestroyFunc(params.hidePopupCallback);
 
         // if the body scrolls, we want to hide the menu, as the menu will not appear in the right location anymore
         this.addDestroyableEventListener(this.eventService, 'bodyScroll', this.destroy.bind(this));

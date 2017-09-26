@@ -1,10 +1,15 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v13.2.0
 "use strict";
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -14,6 +19,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+Object.defineProperty(exports, "__esModule", { value: true });
 var main_1 = require("ag-grid/main");
 var RenderedColumn = (function (_super) {
     __extends(RenderedColumn, _super);
@@ -44,10 +50,10 @@ var RenderedColumn = (function (_super) {
         this.addDestroyableEventListener(this.cbSelect, main_1.AgCheckbox.EVENT_CHANGED, this.onChange.bind(this));
         this.addDestroyableEventListener(this.eText, 'click', this.onClick.bind(this));
         this.addTap();
-        main_1.CssClassApplier.addToolPanelClassesFromColDef(this.column.getColDef(), this.getGui(), this.gridOptionsWrapper, this.column, null);
+        main_1.CssClassApplier.addToolPanelClassesFromColDef(this.column.getColDef(), this.getHtmlElement(), this.gridOptionsWrapper, this.column, null);
     };
     RenderedColumn.prototype.addTap = function () {
-        var touchListener = new main_1.TouchListener(this.getGui());
+        var touchListener = new main_1.TouchListener(this.getHtmlElement());
         this.addDestroyableEventListener(touchListener, main_1.TouchListener.EVENT_TAP, this.onClick.bind(this));
         this.addDestroyFunc(touchListener.destroy.bind(touchListener));
     };
@@ -87,7 +93,13 @@ var RenderedColumn = (function (_super) {
             if (functionPassive) {
                 var copyOfPivotColumns = this.columnController.getPivotColumns().slice();
                 copyOfPivotColumns.push(column);
-                this.eventService.dispatchEvent(main_1.Events.EVENT_COLUMN_PIVOT_CHANGE_REQUEST, { columns: copyOfPivotColumns });
+                var event_1 = {
+                    type: main_1.Events.EVENT_COLUMN_PIVOT_CHANGE_REQUEST,
+                    columns: copyOfPivotColumns,
+                    api: this.gridApi,
+                    columnApi: this.columnApi
+                };
+                this.eventService.dispatchEvent(event_1);
             }
             else {
                 columnController.removePivotColumn(column);
@@ -98,7 +110,13 @@ var RenderedColumn = (function (_super) {
             if (functionPassive) {
                 var copyOfValueColumns = this.columnController.getValueColumns().slice();
                 copyOfValueColumns.push(column);
-                this.eventService.dispatchEvent(main_1.Events.EVENT_COLUMN_VALUE_CHANGE_REQUEST, { columns: copyOfValueColumns });
+                var event_2 = {
+                    type: main_1.Events.EVENT_COLUMN_VALUE_CHANGE_REQUEST,
+                    columns: copyOfValueColumns,
+                    api: this.gridApi,
+                    columnApi: this.columnApi
+                };
+                this.eventService.dispatchEvent(event_2);
             }
             else {
                 columnController.removeValueColumn(column);
@@ -109,7 +127,13 @@ var RenderedColumn = (function (_super) {
             if (functionPassive) {
                 var copyOfRowGroupColumns = this.columnController.getRowGroupColumns().slice();
                 copyOfRowGroupColumns.push(column);
-                this.eventService.dispatchEvent(main_1.Events.EVENT_COLUMN_ROW_GROUP_CHANGE_REQUEST, { columns: copyOfRowGroupColumns });
+                var event_3 = {
+                    type: main_1.Events.EVENT_COLUMN_ROW_GROUP_CHANGE_REQUEST,
+                    columns: copyOfRowGroupColumns,
+                    api: this.gridApi,
+                    columnApi: this.columnApi
+                };
+                this.eventService.dispatchEvent(event_3);
             }
             else {
                 columnController.removeRowGroupColumn(column);
@@ -127,7 +151,13 @@ var RenderedColumn = (function (_super) {
             if (functionPassive) {
                 var copyOfValueColumns = this.columnController.getValueColumns().slice();
                 main_1.Utils.removeFromArray(copyOfValueColumns, column);
-                this.eventService.dispatchEvent(main_1.Events.EVENT_COLUMN_VALUE_CHANGE_REQUEST, { columns: copyOfValueColumns });
+                var event_4 = {
+                    type: main_1.Events.EVENT_COLUMN_VALUE_CHANGE_REQUEST,
+                    api: this.gridApi,
+                    columnApi: this.columnApi,
+                    columns: copyOfValueColumns
+                };
+                this.eventService.dispatchEvent(event_4);
             }
             else {
                 this.columnController.addValueColumn(column);
@@ -137,7 +167,13 @@ var RenderedColumn = (function (_super) {
             if (functionPassive) {
                 var copyOfRowGroupColumns = this.columnController.getRowGroupColumns().slice();
                 main_1.Utils.removeFromArray(copyOfRowGroupColumns, column);
-                this.eventService.dispatchEvent(main_1.Events.EVENT_COLUMN_ROW_GROUP_CHANGE_REQUEST, { columns: copyOfRowGroupColumns });
+                var event_5 = {
+                    type: main_1.Events.EVENT_COLUMN_ROW_GROUP_CHANGE_REQUEST,
+                    api: this.gridApi,
+                    columnApi: this.columnApi,
+                    columns: copyOfRowGroupColumns
+                };
+                this.eventService.dispatchEvent(event_5);
             }
             else {
                 this.columnController.addRowGroupColumn(column);
@@ -147,7 +183,13 @@ var RenderedColumn = (function (_super) {
             if (functionPassive) {
                 var copyOfPivotColumns = this.columnController.getPivotColumns().slice();
                 main_1.Utils.removeFromArray(copyOfPivotColumns, column);
-                this.eventService.dispatchEvent(main_1.Events.EVENT_COLUMN_PIVOT_CHANGE_REQUEST, { columns: copyOfPivotColumns });
+                var event_6 = {
+                    type: main_1.Events.EVENT_COLUMN_PIVOT_CHANGE_REQUEST,
+                    api: this.gridApi,
+                    columnApi: this.columnApi,
+                    columns: copyOfPivotColumns
+                };
+                this.eventService.dispatchEvent(event_6);
             }
             else {
                 this.columnController.addPivotColumn(column);
@@ -158,12 +200,20 @@ var RenderedColumn = (function (_super) {
         var _this = this;
         var dragSource = {
             type: main_1.DragSourceType.ToolPanel,
-            eElement: this.getGui(),
+            eElement: this.getHtmlElement(),
             dragItemName: this.displayName,
-            dragItem: [this.column]
+            dragItemCallback: function () { return _this.createDragItem(); }
         };
         this.dragAndDropService.addDragSource(dragSource, true);
         this.addDestroyFunc(function () { return _this.dragAndDropService.removeDragSource(dragSource); });
+    };
+    RenderedColumn.prototype.createDragItem = function () {
+        var visibleState = {};
+        visibleState[this.column.getId()] = this.column.isVisible();
+        return {
+            columns: [this.column],
+            visibleState: visibleState
+        };
     };
     RenderedColumn.prototype.onColumnStateChanged = function () {
         this.processingColumnStateChange = true;
@@ -186,53 +236,61 @@ var RenderedColumn = (function (_super) {
         this.cbSelect.setPassive(checkboxPassive);
         this.processingColumnStateChange = false;
     };
+    RenderedColumn.TEMPLATE = '<div class="ag-column-select-column">' +
+        '<span class="ag-column-select-indent"></span>' +
+        '<ag-checkbox class="ag-column-select-checkbox"></ag-checkbox>' +
+        '<span class="ag-column-select-label"></span>' +
+        '</div>';
+    __decorate([
+        main_1.Autowired('gridOptionsWrapper'),
+        __metadata("design:type", main_1.GridOptionsWrapper)
+    ], RenderedColumn.prototype, "gridOptionsWrapper", void 0);
+    __decorate([
+        main_1.Autowired('columnController'),
+        __metadata("design:type", main_1.ColumnController)
+    ], RenderedColumn.prototype, "columnController", void 0);
+    __decorate([
+        main_1.Autowired('eventService'),
+        __metadata("design:type", main_1.EventService)
+    ], RenderedColumn.prototype, "eventService", void 0);
+    __decorate([
+        main_1.Autowired('dragAndDropService'),
+        __metadata("design:type", main_1.DragAndDropService)
+    ], RenderedColumn.prototype, "dragAndDropService", void 0);
+    __decorate([
+        main_1.Autowired('gridPanel'),
+        __metadata("design:type", main_1.GridPanel)
+    ], RenderedColumn.prototype, "gridPanel", void 0);
+    __decorate([
+        main_1.Autowired('context'),
+        __metadata("design:type", main_1.Context)
+    ], RenderedColumn.prototype, "context", void 0);
+    __decorate([
+        main_1.Autowired('columnApi'),
+        __metadata("design:type", main_1.ColumnApi)
+    ], RenderedColumn.prototype, "columnApi", void 0);
+    __decorate([
+        main_1.Autowired('gridApi'),
+        __metadata("design:type", main_1.GridApi)
+    ], RenderedColumn.prototype, "gridApi", void 0);
+    __decorate([
+        main_1.QuerySelector('.ag-column-select-label'),
+        __metadata("design:type", HTMLElement)
+    ], RenderedColumn.prototype, "eText", void 0);
+    __decorate([
+        main_1.QuerySelector('.ag-column-select-indent'),
+        __metadata("design:type", HTMLElement)
+    ], RenderedColumn.prototype, "eIndent", void 0);
+    __decorate([
+        main_1.QuerySelector('.ag-column-select-checkbox'),
+        __metadata("design:type", main_1.AgCheckbox)
+    ], RenderedColumn.prototype, "cbSelect", void 0);
+    __decorate([
+        main_1.PostConstruct,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", []),
+        __metadata("design:returntype", void 0)
+    ], RenderedColumn.prototype, "init", null);
     return RenderedColumn;
 }(main_1.Component));
-RenderedColumn.TEMPLATE = '<div class="ag-column-select-column">' +
-    '<span class="ag-column-select-indent"></span>' +
-    '<ag-checkbox class="ag-column-select-checkbox"></ag-checkbox>' +
-    '<span class="ag-column-select-label"></span>' +
-    '</div>';
-__decorate([
-    main_1.Autowired('gridOptionsWrapper'),
-    __metadata("design:type", main_1.GridOptionsWrapper)
-], RenderedColumn.prototype, "gridOptionsWrapper", void 0);
-__decorate([
-    main_1.Autowired('columnController'),
-    __metadata("design:type", main_1.ColumnController)
-], RenderedColumn.prototype, "columnController", void 0);
-__decorate([
-    main_1.Autowired('eventService'),
-    __metadata("design:type", main_1.EventService)
-], RenderedColumn.prototype, "eventService", void 0);
-__decorate([
-    main_1.Autowired('dragAndDropService'),
-    __metadata("design:type", main_1.DragAndDropService)
-], RenderedColumn.prototype, "dragAndDropService", void 0);
-__decorate([
-    main_1.Autowired('gridPanel'),
-    __metadata("design:type", main_1.GridPanel)
-], RenderedColumn.prototype, "gridPanel", void 0);
-__decorate([
-    main_1.Autowired('context'),
-    __metadata("design:type", main_1.Context)
-], RenderedColumn.prototype, "context", void 0);
-__decorate([
-    main_1.QuerySelector('.ag-column-select-label'),
-    __metadata("design:type", HTMLElement)
-], RenderedColumn.prototype, "eText", void 0);
-__decorate([
-    main_1.QuerySelector('.ag-column-select-indent'),
-    __metadata("design:type", HTMLElement)
-], RenderedColumn.prototype, "eIndent", void 0);
-__decorate([
-    main_1.QuerySelector('.ag-column-select-checkbox'),
-    __metadata("design:type", main_1.AgCheckbox)
-], RenderedColumn.prototype, "cbSelect", void 0);
-__decorate([
-    main_1.PostConstruct,
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], RenderedColumn.prototype, "init", null);
 exports.RenderedColumn = RenderedColumn;

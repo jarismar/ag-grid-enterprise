@@ -1,4 +1,4 @@
-// ag-grid-enterprise v10.0.1
+// ag-grid-enterprise v13.2.0
 import { IRowNodeStage, StageExecuteParams } from "ag-grid/main";
 export declare class GroupStage implements IRowNodeStage {
     private selectionController;
@@ -9,13 +9,16 @@ export declare class GroupStage implements IRowNodeStage {
     private context;
     private groupIdSequence;
     execute(params: StageExecuteParams): void;
-    private recursivelySetLevelOnChildren(rowNode, level);
-    private recursivelyDeptFirstRemoveSingleChildren(rowNode, includeParents);
-    private recursivelyGroup(rowNode, groupColumns, level, expandByDefault, includeParents, isPivot);
-    private bucketIntoChildrenAfterGroup(rowNode, groupColumn, expandByDefault, level, includeParents, numberOfGroupColumns, isPivot);
-    private insertRowNodes(newRowNodes, rootNode, groupColumns, expandByDefault, includeParents, isPivot);
-    private placeNodeIntoNextGroup(previousGroup, nodeToPlace, groupColumn, expandByDefault, level, includeParents, numberOfGroupColumns, isPivot);
+    private handleTransaction(tran, changedPath, rootNode, groupedCols, expandByDefault, includeParents, isPivot);
+    private checkParents(leafRowNodes, changedPath, rootNode, groupColumns, expandByDefault, includeParents, isPivot);
+    private removeRowNodesFromGroups(leafRowNodes, changedPath, rootNode);
+    private removeRowNodeFromGroups(leafToRemove, rootNode);
+    private removeGroupFromParent(groupPointer);
+    private shotgunResetEverything(rootNode, groupedCols, expandByDefault, includeParents, isPivot);
+    private insertRowNodesIntoGroups(newRowNodes, changedPath, rootNode, groupColumns, expandByDefault, includeParents, isPivot);
+    private insertRowNodeIntoGroups(rowNode, rootNode, groupColumns, expandByDefault, includeParents, isPivot);
+    private getOrCreateNextGroup(parentGroup, nodeToPlace, groupColumn, expandByDefault, level, includeParents, numberOfGroupColumns, isPivot);
     private getKeyForNode(groupColumn, rowNode);
-    private createGroup(groupColumn, groupKey, parent, expandByDefault, level, includeParents, numberOfGroupColumns, isPivot);
+    private createSubGroup(groupKey, groupColumn, parent, expandByDefault, level, includeParents, numberOfGroupColumns, isPivot);
     private isExpanded(expandByDefault, level);
 }
