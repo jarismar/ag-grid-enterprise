@@ -228,6 +228,7 @@ var ClipboardService = (function () {
         var deliminator = this.gridOptionsWrapper.getClipboardDeliminator();
         var data = '';
         var cellsToFlash = {};
+        /* added by ADP-e */
         var dataObj = {
             colDefs: [],
             headings: [],
@@ -255,7 +256,7 @@ var ClipboardService = (function () {
         };
         // adds cell values to the data
         var rowCallback = function (currentRow, rowNode, columns) {
-            var row = [];
+            var row = []; // added by ADP-e
             columns.forEach(function (column, index) {
                 var value = _this.valueService.getValue(column, rowNode);
                 var processedValue = _this.userProcessCell(rowNode, column, value, _this.gridOptionsWrapper.getProcessCellForClipboardFunc(), main_1.Constants.EXPORT_TYPE_CLIPBOARD);
@@ -432,6 +433,7 @@ var ClipboardService = (function () {
                     else {
                         event.clipboardData.clearData('text/plain');
                     }
+                    /* added by ADP-e */
                     var hasMoreThanOneCell = dataObj && (dataObj.headings.length > 0 ||
                         dataObj.rows.length > 1 ||
                         (dataObj.rows.length > 0 && dataObj.rows[0].length > 1));

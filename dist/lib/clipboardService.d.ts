@@ -34,7 +34,8 @@ export declare class ClipboardService implements IClipboardService {
     private userProcessCell(rowNode, column, value, func, type);
     private getRowNode(gridRow);
     copySelectedRowsToClipboard(includeHeaders?: boolean, columnKeys?: (string | Column)[]): void;
-    private copyDataToClipboard(data);
+    private htmlFormatter(dataObj?);
+    private copyDataToClipboard(data, dataObj?);
     private executeOnTempElement(callbackNow, callbackAfter?);
     private dataToArray(strData);
 }

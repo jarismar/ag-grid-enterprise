@@ -3704,11 +3704,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	    Events.EVENT_SELECTION_CHANGED = 'selectionChanged';
 	    Events.EVENT_CELL_MOUSE_OVER = 'cellMouseOver';
 	    Events.EVENT_CELL_MOUSE_OUT = 'cellMouseOut';
+	    Events.DEPRECATED_EVENT_BEFORE_FILTER_CHANGED = 'beforeFilterChanged'; // added by ADP-e dev team
 	    /** 2 events for filtering. The grid LISTENS for filterChanged and afterFilterChanged */
 	    Events.EVENT_FILTER_CHANGED = 'filterChanged';
 	    /** Filter was change but not applied. Only useful if apply buttons are used in filters. */
 	    Events.EVENT_FILTER_MODIFIED = 'filterModified';
 	    Events.EVENT_SORT_CHANGED = 'sortChanged';
+	    Events.DEPRECATED_EVENT_BEFORE_SORT_CHANGED = 'beforeSortChanged'; // added by ADP-e dev team
 	    /** A row was removed from the dom, for any reason. Use to clean up resources (if any) used by the row. */
 	    Events.EVENT_VIRTUAL_ROW_REMOVED = 'virtualRowRemoved';
 	    Events.EVENT_ROW_CLICKED = 'rowClicked';
@@ -18711,6 +18713,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this.externalFilterPresent = this.gridOptionsWrapper.isExternalFilterPresent();
 	    };
 	    FilterManager.prototype.onFilterChanged = function () {
+	        /* Added by ADP-e */
+	        var beforeFilterChanged = {
+	            type: events_1.Events.DEPRECATED_EVENT_BEFORE_FILTER_CHANGED,
+	            api: this.gridApi,
+	            columnApi: this.columnApi
+	        };
+	        this.eventService.dispatchEvent(beforeFilterChanged);
 	        this.setAdvancedFilterPresent();
 	        this.updateFilterFlagInColumns();
 	        this.checkExternalFilter();
@@ -21117,7 +21126,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var gridOptionsWrapper_1 = __webpack_require__(4);
 	var columnController_1 = __webpack_require__(15);
 	var eventService_1 = __webpack_require__(5);
-	var events_1 = __webpack_require__(11);
+	var events_1 = __webpack_require__(11); // modified by ADP-e
 	var context_2 = __webpack_require__(7);
 	var utils_1 = __webpack_require__(8);
 	var gridApi_1 = __webpack_require__(12);
@@ -21130,6 +21139,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this.setSortForColumn(column, nextDirection, multiSort);
 	    };
 	    SortController.prototype.setSortForColumn = function (column, sort, multiSort) {
+	        /* Added by ADP-e */
+	        var beforeSortChange = {
+	            type: events_1.Events.DEPRECATED_EVENT_BEFORE_SORT_CHANGED,
+	            api: this.gridApi,
+	            columnApi: this.columnApi
+	        };
+	        this.eventService.dispatchEvent(beforeSortChange);
 	        // auto correct - if sort not legal value, then set it to 'no sort' (which is null)
 	        if (sort !== column_1.Column.SORT_ASC && sort !== column_1.Column.SORT_DESC) {
 	            sort = null;
@@ -34051,6 +34067,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var deliminator = this.gridOptionsWrapper.getClipboardDeliminator();
 	        var data = '';
 	        var cellsToFlash = {};
+	        /* added by ADP-e */
 	        var dataObj = {
 	            colDefs: [],
 	            headings: [],
@@ -34078,7 +34095,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        };
 	        // adds cell values to the data
 	        var rowCallback = function (currentRow, rowNode, columns) {
-	            var row = [];
+	            var row = []; // added by ADP-e
 	            columns.forEach(function (column, index) {
 	                var value = _this.valueService.getValue(column, rowNode);
 	                var processedValue = _this.userProcessCell(rowNode, column, value, _this.gridOptionsWrapper.getProcessCellForClipboardFunc(), main_1.Constants.EXPORT_TYPE_CLIPBOARD);
@@ -34255,6 +34272,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    else {
 	                        event.clipboardData.clearData('text/plain');
 	                    }
+	                    /* added by ADP-e */
 	                    var hasMoreThanOneCell = dataObj && (dataObj.headings.length > 0 ||
 	                        dataObj.rows.length > 1 ||
 	                        (dataObj.rows.length > 0 && dataObj.rows[0].length > 1));
