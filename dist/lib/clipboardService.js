@@ -310,7 +310,7 @@ var ClipboardService = (function () {
                 dataObj.headings.push(heading); // added by ADP-e
             }
             data += processedValue.toString();
-            dataObj.rows.push(data); // added by ADP-e
+            dataObj.rows.push([data]); // added by ADP-e
             this.copyDataToClipboard(data, dataObj);
         }
         else {
