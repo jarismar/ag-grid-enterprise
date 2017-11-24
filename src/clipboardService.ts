@@ -375,16 +375,28 @@ export class ClipboardService implements IClipboardService {
         let column = focusedCell.column;
         let value = this.valueService.getValue(column, rowNode);
 
+        /* added by ADP-e */
+        const dataObj = <any>{
+            colDefs: [],
+            headings: [],
+            rows:[]
+        };
+
+        dataObj.colDefs.push(column.getColDef());
+
         let processedValue = this.userProcessCell(rowNode, column, value, this.gridOptionsWrapper.getProcessCellForClipboardFunc(), Constants.EXPORT_TYPE_CLIPBOARD);
         if (Utils.exists(processedValue)) {
 
             let data = '';
             if (includeHeaders) {
-                data = this.columnController.getDisplayNameForColumn(column, 'clipboard', true) + '\r\n';
+                let heading = this.columnController.getDisplayNameForColumn(column, 'clipboard', true); // added by ADP-e
+                data = heading + '\r\n'; // added by ADP-e
+                dataObj.headings.push(heading); // added by ADP-e
             }
             data += processedValue.toString();
+            dataObj.rows.push(data); // added by ADP-e
 
-            this.copyDataToClipboard(data);
+            this.copyDataToClipboard(data, dataObj);
         } else {
             this.copyDataToClipboard('');
         }

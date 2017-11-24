@@ -34133,14 +34133,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var rowNode = this.getRowNode(currentRow);
 	        var column = focusedCell.column;
 	        var value = this.valueService.getValue(column, rowNode);
+	        /* added by ADP-e */
+	        var dataObj = {
+	            colDefs: [],
+	            headings: [],
+	            rows: []
+	        };
+	        dataObj.colDefs.push(column.getColDef());
 	        var processedValue = this.userProcessCell(rowNode, column, value, this.gridOptionsWrapper.getProcessCellForClipboardFunc(), main_1.Constants.EXPORT_TYPE_CLIPBOARD);
 	        if (main_1.Utils.exists(processedValue)) {
 	            var data = '';
 	            if (includeHeaders) {
-	                data = this.columnController.getDisplayNameForColumn(column, 'clipboard', true) + '\r\n';
+	                var heading = this.columnController.getDisplayNameForColumn(column, 'clipboard', true); // added by ADP-e
+	                data = heading + '\r\n'; // added by ADP-e
+	                dataObj.headings.push(heading); // added by ADP-e
 	            }
 	            data += processedValue.toString();
-	            this.copyDataToClipboard(data);
+	            dataObj.rows.push(data); // added by ADP-e
+	            this.copyDataToClipboard(data, dataObj);
 	        }
 	        else {
 	            this.copyDataToClipboard('');
