@@ -1,6 +1,6 @@
 {
   "name": "ag-grid-enterprise",
-  "version": "13.2.0",
+  "version": "13.3.0",
   "description": "ag-Grid Enterprise Features",
   "main": "main.js",
   "types": "main.d.ts",
@@ -35,10 +35,10 @@
     "webpack": "2.2.1",
     "style-loader": "0.13.0",
     "css-loader": "0.23.1",
-    "gulp-rename": "1.2.2"
+    "gulp-rename": "1.2.2",
+    "ag-grid": "git+https://git@github.com/jarismar/ag-grid.git#v13.3.0"
   },
   "peerDependencies": {
-    "ag-grid": "13.2.x"
-  },
-  "dependencies": {}
+    "ag-grid": "git+https://git@github.com/jarismar/ag-grid.git#v13.3.0"
+  }
 }
