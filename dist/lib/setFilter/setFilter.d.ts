@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 import { BaseFilter, IDoesFilterPassParams, ISetFilterParams } from "ag-grid/main";
 export declare class SetFilter extends BaseFilter<string, ISetFilterParams, string[]> {
     private model;
@@ -6,6 +6,7 @@ export declare class SetFilter extends BaseFilter<string, ISetFilterParams, stri
     private eSelectAll;
     private eSelectAllContainer;
     private eMiniFilter;
+    private eFilterLoading;
     private virtualList;
     private debounceFilterChanged;
     private eCheckedIcon;
@@ -15,6 +16,7 @@ export declare class SetFilter extends BaseFilter<string, ISetFilterParams, stri
     constructor();
     customInit(): void;
     private updateCheckboxIcon();
+    setLoading(loading: boolean): void;
     initialiseFilterBodyUi(): void;
     modelFromFloatingFilter(from: string): string[];
     refreshFilterBodyUi(): void;
@@ -27,8 +29,9 @@ export declare class SetFilter extends BaseFilter<string, ISetFilterParams, stri
      * Public method provided so the user can change the value of the filter once
      * the filter has been already started
      * @param options The options to use.
+     * @param selectAll If by default all the values should be selected.
      */
-    setFilterValues(options: string[]): void;
+    setFilterValues(options: string[], selectAll?: boolean): void;
     /**
      * Public method provided so the user can reset the values of the filter once that it has started
      * @param options The options to use.
@@ -38,7 +41,8 @@ export declare class SetFilter extends BaseFilter<string, ISetFilterParams, stri
     bodyTemplate(): string;
     private updateSelectAll();
     private onMiniFilterChanged();
-    private onSelectAll();
+    private onSelectAll(event);
+    private doSelectAll();
     private onItemSelected(value, selected);
     setMiniFilter(newMiniFilter: any): void;
     getMiniFilter(): any;

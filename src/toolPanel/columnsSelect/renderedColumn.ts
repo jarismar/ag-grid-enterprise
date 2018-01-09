@@ -69,7 +69,7 @@ export class RenderedColumn extends Component {
         this.displayName = this.columnController.getDisplayNameForColumn(this.column, 'toolPanel');
         this.eText.innerHTML = this.displayName;
 
-        this.eIndent.style.width = (this.columnDept * 10) + 'px';
+        this.eIndent.style.width = (this.columnDept * this.gridOptionsWrapper.getCheckboxIndentWidth()) + 'px';
 
         if (this.allowDragging) {
             this.addDragSource();
@@ -91,11 +91,11 @@ export class RenderedColumn extends Component {
         this.addDestroyableEventListener(this.eText, 'click', this.onClick.bind(this));
 
         this.addTap();
-        CssClassApplier.addToolPanelClassesFromColDef(this.column.getColDef(), this.getHtmlElement(), this.gridOptionsWrapper, this.column, null);
+        CssClassApplier.addToolPanelClassesFromColDef(this.column.getColDef(), this.getGui(), this.gridOptionsWrapper, this.column, null);
     }
 
     private addTap(): void {
-        let touchListener = new TouchListener(this.getHtmlElement());
+        let touchListener = new TouchListener(this.getGui());
         this.addDestroyableEventListener(touchListener, TouchListener.EVENT_TAP, this.onClick.bind(this));
         this.addDestroyFunc( touchListener.destroy.bind(touchListener) );
     }
@@ -236,7 +236,7 @@ export class RenderedColumn extends Component {
     private addDragSource(): void {
         let dragSource: DragSource = {
             type: DragSourceType.ToolPanel,
-            eElement: this.getHtmlElement(),
+            eElement: this.getGui(),
             dragItemName: this.displayName,
             dragItemCallback: () => this.createDragItem()
         };

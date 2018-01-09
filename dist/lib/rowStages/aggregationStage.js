@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -19,23 +19,37 @@ var AggregationStage = (function () {
     // it's possible to recompute the aggregate without doing the other parts
     // + gridApi.recomputeAggregates()
     AggregationStage.prototype.execute = function (params) {
-        var rowNode = params.rowNode, changedPath = params.changedPath;
-        // we don't do aggregation if user provided the groups
-        var rowsAlreadyGrouped = main_1._.exists(this.gridOptionsWrapper.getNodeChildDetailsFunc());
-        if (rowsAlreadyGrouped) {
-            return;
+        // we don't do aggregation if doing legacy tree good
+        var doingLegacyTreeData = main_1._.exists(this.gridOptionsWrapper.getNodeChildDetailsFunc());
+        if (doingLegacyTreeData) {
+            return null;
         }
+        var aggDetails = this.createAggDetails(params);
+        this.recursivelyCreateAggData(params.rowNode, aggDetails);
+    };
+    AggregationStage.prototype.createAggDetails = function (params) {
         var pivotActive = this.columnController.isPivotActive();
         var measureColumns = this.columnController.getValueColumns();
         var pivotColumns = pivotActive ? this.columnController.getPivotColumns() : [];
-        this.recursivelyCreateAggData(rowNode, changedPath, measureColumns, pivotColumns);
+        var aggDetails = {
+            changedPath: params.changedPath,
+            valueColumns: measureColumns,
+            pivotColumns: pivotColumns
+        };
+        return aggDetails;
     };
-    AggregationStage.prototype.recursivelyCreateAggData = function (rowNode, changedPath, measureColumns, pivotColumns) {
+    AggregationStage.prototype.recursivelyCreateAggData = function (rowNode, aggDetails) {
         var _this = this;
         // aggregate all children first, as we use the result in this nodes calculations
         rowNode.childrenAfterFilter.forEach(function (child) {
-            if (child.group) {
-                _this.recursivelyCreateAggData(child, changedPath, measureColumns, pivotColumns);
+            var nodeHasChildren = child.hasChildren();
+            if (nodeHasChildren) {
+                _this.recursivelyCreateAggData(child, aggDetails);
+            }
+            else {
+                if (child.aggData) {
+                    child.setAggData(null);
+                }
             }
         });
         //Optionally prevent the aggregation at the root Node
@@ -48,25 +62,25 @@ var AggregationStage = (function () {
                 return;
             }
         }
-        var skipBecauseNoChangedPath = changedPath && !changedPath.isInPath(rowNode);
+        var skipBecauseNoChangedPath = aggDetails.changedPath && !aggDetails.changedPath.isInPath(rowNode);
         if (skipBecauseNoChangedPath) {
             return;
         }
-        this.aggregateRowNode(rowNode, changedPath, measureColumns, pivotColumns);
+        this.aggregateRowNode(rowNode, aggDetails);
     };
-    AggregationStage.prototype.aggregateRowNode = function (rowNode, changedPath, measureColumns, pivotColumns) {
-        var measureColumnsMissing = measureColumns.length === 0;
-        var pivotColumnsMissing = pivotColumns.length === 0;
-        var userProvidedGroupRowAggNodes = this.gridOptionsWrapper.getGroupRowAggNodesFunc();
+    AggregationStage.prototype.aggregateRowNode = function (rowNode, aggDetails) {
+        var measureColumnsMissing = aggDetails.valueColumns.length === 0;
+        var pivotColumnsMissing = aggDetails.pivotColumns.length === 0;
+        var userFunc = this.gridOptionsWrapper.getGroupRowAggNodesFunc();
         var aggResult;
-        if (rowNode.group && userProvidedGroupRowAggNodes) {
-            aggResult = userProvidedGroupRowAggNodes(rowNode.childrenAfterFilter);
+        if (userFunc) {
+            aggResult = userFunc(rowNode.childrenAfterFilter);
         }
         else if (measureColumnsMissing) {
             aggResult = null;
         }
-        else if (rowNode.group && pivotColumnsMissing) {
-            aggResult = this.aggregateRowNodeUsingValuesOnly(rowNode, changedPath, measureColumns);
+        else if (pivotColumnsMissing) {
+            aggResult = this.aggregateRowNodeUsingValuesOnly(rowNode, aggDetails);
         }
         else {
             aggResult = this.aggregateRowNodeUsingValuesAndPivot(rowNode);
@@ -112,11 +126,15 @@ var AggregationStage = (function () {
         });
         return result;
     };
-    AggregationStage.prototype.aggregateRowNodeUsingValuesOnly = function (rowNode, changedPath, valueColumns) {
+    AggregationStage.prototype.aggregateRowNodeUsingValuesOnly = function (rowNode, aggDetails) {
         var _this = this;
         var result = {};
-        var changedValueColumns = changedPath ? changedPath.getValueColumnsForNode(rowNode, valueColumns) : valueColumns;
-        var notChangedValueColumns = changedPath ? changedPath.getNotValueColumnsForNode(rowNode, valueColumns) : null;
+        var changedValueColumns = aggDetails.changedPath ?
+            aggDetails.changedPath.getValueColumnsForNode(rowNode, aggDetails.valueColumns)
+            : aggDetails.valueColumns;
+        var notChangedValueColumns = aggDetails.changedPath ?
+            aggDetails.changedPath.getNotValueColumnsForNode(rowNode, aggDetails.valueColumns)
+            : null;
         var values2d = this.getValuesNormal(rowNode, changedValueColumns);
         var oldValues = rowNode.aggData;
         changedValueColumns.forEach(function (valueColumn, index) {
@@ -161,15 +179,9 @@ var AggregationStage = (function () {
             var childNode = rowNode.childrenAfterFilter[i];
             for (var j = 0; j < valueColumnCount; j++) {
                 var valueColumn = valueColumns[j];
-                var value = void 0;
                 // if the row is a group, then it will only have an agg result value,
                 // which means valueGetter is never used.
-                if (childNode.group) {
-                    value = childNode.aggData[valueColumn.getId()];
-                }
-                else {
-                    value = this.valueService.getValue(valueColumn, childNode);
-                }
+                var value = this.valueService.getValue(valueColumn, childNode);
                 values[j].push(value);
             }
         }

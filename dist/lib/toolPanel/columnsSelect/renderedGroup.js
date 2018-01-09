@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -44,7 +44,7 @@ var RenderedGroup = (function (_super) {
         eText.innerHTML = this.displayName;
         this.setupExpandContract();
         var eIndent = this.queryForHtmlElement('#eIndent');
-        eIndent.style.width = (this.columnDept * 10) + 'px';
+        eIndent.style.width = (this.columnDept * this.gridOptionsWrapper.getCheckboxIndentWidth()) + 'px';
         this.addDestroyableEventListener(eText, 'click', this.onClick.bind(this));
         this.addDestroyableEventListener(this.eventService, main_1.Events.EVENT_COLUMN_PIVOT_MODE_CHANGED, this.onColumnStateChanged.bind(this));
         this.addDestroyableEventListener(this.cbSelect, main_1.AgCheckbox.EVENT_CHANGED, this.onCheckboxChanged.bind(this));
@@ -58,7 +58,7 @@ var RenderedGroup = (function (_super) {
         }
         this.onColumnStateChanged();
         this.addVisibilityListenersToAllChildren();
-        main_1.CssClassApplier.addToolPanelClassesFromColDef(this.columnGroup.getColGroupDef(), this.getHtmlElement(), this.gridOptionsWrapper, null, this.columnGroup);
+        main_1.CssClassApplier.addToolPanelClassesFromColDef(this.columnGroup.getColGroupDef(), this.getGui(), this.gridOptionsWrapper, null, this.columnGroup);
     };
     RenderedGroup.prototype.addVisibilityListenersToAllChildren = function () {
         var _this = this;
@@ -73,7 +73,7 @@ var RenderedGroup = (function (_super) {
         var _this = this;
         var dragSource = {
             type: main_1.DragSourceType.ToolPanel,
-            eElement: this.getHtmlElement(),
+            eElement: this.getGui(),
             dragItemName: this.displayName,
             dragItemCallback: function () { return _this.createDragItem(); }
         };

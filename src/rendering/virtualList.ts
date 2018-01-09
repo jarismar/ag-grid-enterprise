@@ -1,4 +1,4 @@
-import {Environment, Autowired, Component, PostConstruct, Utils} from "ag-grid/main";
+import {Environment, Autowired, Component, PostConstruct, Utils, GridOptionsWrapper} from "ag-grid/main";
 
 export interface VirtualListModel {
     getRowCount(): number;
@@ -23,6 +23,7 @@ export class VirtualList extends Component {
     private rowHeight = 20;
 
     @Autowired('environment') private environment:  Environment;
+    @Autowired('gridOptionsWrapper') gridOptionsWrapper: GridOptionsWrapper;
 
     constructor() {
         super(null);
@@ -36,11 +37,7 @@ export class VirtualList extends Component {
 
         this.addScrollListener();
 
-        // Material data table has strict guidelines about whitespace, and these values are different than the ones
-        // ag-grid uses by default. We override the default ones for the sake of making it better out of the box
-        if (this.environment.getTheme() == "ag-material-next") {
-            this.rowHeight = 32;
-        }
+        this.rowHeight = this.gridOptionsWrapper.getVirtualItemHeight();
     }
 
     public ensureIndexVisible(index: number): void {
@@ -54,8 +51,8 @@ export class VirtualList extends Component {
         let rowTopPixel = index * this.rowHeight;
         let rowBottomPixel = rowTopPixel + this.rowHeight;
 
-        let viewportTopPixel = this.getHtmlElement().scrollTop;
-        let viewportHeight = this.getHtmlElement().offsetHeight;
+        let viewportTopPixel = this.getGui().scrollTop;
+        let viewportHeight = this.getGui().offsetHeight;
         let viewportBottomPixel = viewportTopPixel + viewportHeight;
 
         let viewportScrolledPastRow = viewportTopPixel > rowTopPixel;
@@ -63,11 +60,11 @@ export class VirtualList extends Component {
 
         if (viewportScrolledPastRow) {
             // if row is before, scroll up with row at top
-            this.getHtmlElement().scrollTop = rowTopPixel;
+            this.getGui().scrollTop = rowTopPixel;
         } else if (viewportScrolledBeforeRow) {
             // if row is below, scroll down with row at bottom
             let newScrollPosition = rowBottomPixel - viewportHeight;
-            this.getHtmlElement().scrollTop = newScrollPosition;
+            this.getGui().scrollTop = newScrollPosition;
         }
     }
     
@@ -80,7 +77,7 @@ export class VirtualList extends Component {
     }
     
     public getScrollTop(): number {
-        return this.getHtmlElement().scrollTop;
+        return this.getGui().scrollTop;
     }
     
     public setRowHeight(rowHeight: number): void {
@@ -103,8 +100,8 @@ export class VirtualList extends Component {
     }
 
     private drawVirtualRows() {
-        let topPixel = this.getHtmlElement().scrollTop;
-        let bottomPixel = topPixel + this.getHtmlElement().offsetHeight;
+        let topPixel = this.getGui().scrollTop;
+        let bottomPixel = topPixel + this.getGui().offsetHeight;
 
         let firstRow = Math.floor(topPixel / this.rowHeight);
         let lastRow = Math.floor(bottomPixel / this.rowHeight);
@@ -154,7 +151,7 @@ export class VirtualList extends Component {
         eDiv.style.top = (this.rowHeight * rowIndex) + "px";
 
         let rowComponent = this.componentCreator(value);
-        eDiv.appendChild(rowComponent.getHtmlElement());
+        eDiv.appendChild(rowComponent.getGui());
 
         this.eListContainer.appendChild(eDiv);
         this.rowsInBodyContainer[rowIndex] = {

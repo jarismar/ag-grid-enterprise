@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -138,7 +138,9 @@ var ClipboardService = (function () {
         var rowCallback = function (gridRow, rowNode, columns) {
             updatedRowNodes.push(rowNode);
             columns.forEach(function (column) {
-                _this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds, main_1.Constants.EXPORT_TYPE_CLIPBOARD);
+                if (column.isCellEditable(rowNode)) {
+                    _this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds, main_1.Constants.EXPORT_TYPE_CLIPBOARD);
+                }
             });
         };
         this.iterateActiveRanges(false, rowCallback);
@@ -302,20 +304,20 @@ var ClipboardService = (function () {
         };
         dataObj.colDefs.push(column.getColDef());
         var processedValue = this.userProcessCell(rowNode, column, value, this.gridOptionsWrapper.getProcessCellForClipboardFunc(), main_1.Constants.EXPORT_TYPE_CLIPBOARD);
-        if (main_1.Utils.exists(processedValue)) {
-            var data = '';
-            if (includeHeaders) {
-                var heading = this.columnController.getDisplayNameForColumn(column, 'clipboard', true); // added by ADP-e
-                data = heading + '\r\n'; // added by ADP-e
-                dataObj.headings.push(heading); // added by ADP-e
-            }
-            data += processedValue.toString();
-            dataObj.rows.push([data]); // added by ADP-e
-            this.copyDataToClipboard(data, dataObj);
+        if (main_1._.missing(processedValue)) {
+            // copy the new line character to clipboard instead of an empty string, as the 'execCommand' will ignore it.
+            // this behaviour is consistent with how Excel works!
+            processedValue = '\n';
         }
-        else {
-            this.copyDataToClipboard('');
+        var data = '';
+        if (includeHeaders) {
+            var heading = this.columnController.getDisplayNameForColumn(column, 'clipboard', true); // added by ADP-e
+            data = heading + '\r\n'; // changed by ADP-e
+            dataObj.headings.push(heading); // added by ADP-e
         }
+        data += processedValue.toString();
+        dataObj.rows.push([data]); // added by ADP-e
+        this.copyDataToClipboard(data, dataObj);
         var cellId = focusedCell.createId();
         var cellsToFlash = {};
         cellsToFlash[cellId] = true;
@@ -488,9 +490,9 @@ var ClipboardService = (function () {
         }
     };
     // From http://stackoverflow.com/questions/1293147/javascript-code-to-parse-csv-data
-    // This will parse a delimited string into an array of
-    // arrays. The default delimiter is the comma, but this
-    // can be overriden in the second argument.
+    // This will parse a delimited string into an array of arrays.
+    // Note: this code fixes an issue with the example posted on stack overflow where it doesn't correctly handle
+    // empty values in the first cell.
     ClipboardService.prototype.dataToArray = function (strData) {
         var delimiter = this.gridOptionsWrapper.getClipboardDeliminator();
         // Create a regular expression to parse the CSV values.
@@ -504,20 +506,24 @@ var ClipboardService = (function () {
         // Create an array to hold our data. Give the array
         // a default empty first row.
         var arrData = [[]];
-        // Create an array to hold our individual pattern
-        // matching groups.
-        var arrMatches = null;
+        // Create an array to hold our individual pattern matching groups.
+        var arrMatches;
+        // Required for handling edge case on first row copy
+        var atFirstRow = true;
         // Keep looping over the regular expression matches
         // until we can no longer find a match.
         while (arrMatches = objPattern.exec(strData)) {
             // Get the delimiter that was found.
             var strMatchedDelimiter = arrMatches[1];
+            // Handles case when first row is an empty cell, insert an empty string before delimiter
+            if (atFirstRow && strMatchedDelimiter) {
+                arrData[0].push("");
+            }
             // Check to see if the given delimiter has a length
             // (is not the start of string) and if it matches
             // field delimiter. If id does not, then we know
             // that this delimiter is a row delimiter.
-            if (strMatchedDelimiter.length &&
-                strMatchedDelimiter !== delimiter) {
+            if (strMatchedDelimiter.length && strMatchedDelimiter !== delimiter) {
                 // Since we have reached a new row of data,
                 // add an empty row to our data array.
                 arrData.push([]);
@@ -528,7 +534,7 @@ var ClipboardService = (function () {
             // captured (quoted or unquoted).
             if (arrMatches[2]) {
                 // We found a quoted value. When we capture
-                // this value, unescape any double quotes.
+                // this value, unescaped any double quotes.
                 strMatchedValue = arrMatches[2].replace(new RegExp("\"\"", "g"), "\"");
             }
             else {
@@ -538,6 +544,7 @@ var ClipboardService = (function () {
             // Now that we have our value string, let's add
             // it to the data array.
             arrData[arrData.length - 1].push(strMatchedValue);
+            atFirstRow = false;
         }
         // Return the parsed data.
         return arrData;

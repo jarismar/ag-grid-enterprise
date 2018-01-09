@@ -1,12 +1,13 @@
 {
   "name": "ag-grid-enterprise",
-  "version": "13.3.0",
+  "version": "14.0.1",
   "description": "ag-Grid Enterprise Features",
   "main": "main.js",
   "types": "main.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "watchWebpack": "webpack --watch"
+    "watchWebpack": "webpack --watch",
+    "build": "gulp release"
   },
   "repository": {
     "type": "git",
@@ -36,9 +37,10 @@
     "style-loader": "0.13.0",
     "css-loader": "0.23.1",
     "gulp-rename": "1.2.2",
-    "ag-grid": "git+https://git@github.com/jarismar/ag-grid.git#v13.3.0"
+    "ag-grid": "git+https://git@github.com/jarismar/ag-grid.git#v14.0.0"
   },
   "peerDependencies": {
-    "ag-grid": "git+https://git@github.com/jarismar/ag-grid.git#v13.3.0"
-  }
+    "ag-grid": "git+https://git@github.com/jarismar/ag-grid.git#v14.0.0"
+  },
+  "dependencies": {}
 }

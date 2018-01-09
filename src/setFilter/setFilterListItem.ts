@@ -1,15 +1,15 @@
 import {
     Component,
-    ICellRendererFunc,
     CellRendererService,
     ValueFormatterService,
     Autowired,
     PostConstruct,
     GridOptionsWrapper,
-    ICellRendererComp,
     _,
     Column,
-    AgEvent
+    AgEvent,
+    Promise,
+    ICellRendererComp
 } from "ag-grid/main";
 
 export interface SelectedEvent extends AgEvent {
@@ -51,12 +51,13 @@ export class SetFilterListItem extends Component {
         this.eCheckedIcon = _.createIconNoSpan('checkboxChecked', this.gridOptionsWrapper, this.column);
         this.eUncheckedIcon = _.createIconNoSpan('checkboxUnchecked', this.gridOptionsWrapper, this.column);
         this.eCheckbox = this.queryForHtmlElement(".ag-filter-checkbox");
-        this.eClickableArea = this.getHtmlElement();
+        this.eClickableArea = this.getGui();
 
         this.updateCheckboxIcon();
         this.render();
 
-        let listener = () => {
+        let listener = (mouseEvent: MouseEvent) => {
+            _.addAgGridEventPath(mouseEvent);
             this.selected = !this.selected;
             this.updateCheckboxIcon();
             let event: SelectedEvent = {
@@ -91,15 +92,20 @@ export class SetFilterListItem extends Component {
     }
 
     public render(): void {
-
         let valueElement = this.queryForHtmlElement(".ag-filter-value");
+        let valueFormatted = this.valueFormatterService.formatValue(this.column, null, null, this.value);
 
-         let valueFormatted = this.valueFormatterService.formatValue(this.column, null, null, this.value);
+        let colDef = this.column.getColDef();
+        let valueObj = {value: this.value, valueFormatted: valueFormatted};
 
-            let component = this.cellRendererService.useFilterCellRenderer(this.column.getColDef(), valueElement, {value: this.value, valueFormatted: valueFormatted});
+        let componentPromise:Promise<ICellRendererComp> = this.cellRendererService.useFilterCellRenderer(colDef, valueElement, valueObj);
+
+        if (!componentPromise) return;
+
+        componentPromise.then(component=>{
             if (component && component.destroy) {
-                this.addDestroyFunc( component.destroy.bind(component) );
-
-        }
+                this.addDestroyFunc(component.destroy.bind(component));
+            }
+        })
     }
 }

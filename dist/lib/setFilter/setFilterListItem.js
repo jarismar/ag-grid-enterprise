@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -35,10 +35,11 @@ var SetFilterListItem = (function (_super) {
         this.eCheckedIcon = main_1._.createIconNoSpan('checkboxChecked', this.gridOptionsWrapper, this.column);
         this.eUncheckedIcon = main_1._.createIconNoSpan('checkboxUnchecked', this.gridOptionsWrapper, this.column);
         this.eCheckbox = this.queryForHtmlElement(".ag-filter-checkbox");
-        this.eClickableArea = this.getHtmlElement();
+        this.eClickableArea = this.getGui();
         this.updateCheckboxIcon();
         this.render();
-        var listener = function () {
+        var listener = function (mouseEvent) {
+            main_1._.addAgGridEventPath(mouseEvent);
             _this.selected = !_this.selected;
             _this.updateCheckboxIcon();
             var event = {
@@ -69,12 +70,19 @@ var SetFilterListItem = (function (_super) {
         }
     };
     SetFilterListItem.prototype.render = function () {
+        var _this = this;
         var valueElement = this.queryForHtmlElement(".ag-filter-value");
         var valueFormatted = this.valueFormatterService.formatValue(this.column, null, null, this.value);
-        var component = this.cellRendererService.useFilterCellRenderer(this.column.getColDef(), valueElement, { value: this.value, valueFormatted: valueFormatted });
-        if (component && component.destroy) {
-            this.addDestroyFunc(component.destroy.bind(component));
-        }
+        var colDef = this.column.getColDef();
+        var valueObj = { value: this.value, valueFormatted: valueFormatted };
+        var componentPromise = this.cellRendererService.useFilterCellRenderer(colDef, valueElement, valueObj);
+        if (!componentPromise)
+            return;
+        componentPromise.then(function (component) {
+            if (component && component.destroy) {
+                _this.addDestroyFunc(component.destroy.bind(component));
+            }
+        });
     };
     SetFilterListItem.EVENT_SELECTED = 'selected';
     SetFilterListItem.TEMPLATE = '<label class="ag-set-filter-item">' +

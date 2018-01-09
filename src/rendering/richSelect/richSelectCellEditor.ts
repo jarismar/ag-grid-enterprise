@@ -1,7 +1,6 @@
 
 import {
     ICellEditor,
-    ICellEditorParams,
     Component,
     Autowired,
     Context,
@@ -9,16 +8,12 @@ import {
     Constants,
     ICellRendererComp,
     ICellRendererFunc,
-    CellRendererService
+    CellRendererService,
+    IRichCellEditorParams,
+    Promise
 } from "ag-grid/main";
 import {RichSelectRow} from "./richSelectRow";
 import {VirtualList} from "../virtualList";
-
-export interface IRichCellEditorParams extends ICellEditorParams {
-    values: string[];
-    cellHeight: number,
-    cellRenderer: {new(): ICellRendererComp} | ICellRendererFunc | string;
-}
 
 export class RichSelectCellEditor extends Component implements ICellEditor {
 
@@ -67,7 +62,7 @@ export class RichSelectCellEditor extends Component implements ICellEditor {
 
         this.virtualList.setComponentCreator(this.createRowComponent.bind(this));
 
-        this.getHtmlElement().querySelector('.ag-rich-select-list').appendChild(this.virtualList.getHtmlElement());
+        this.getGui().querySelector('.ag-rich-select-list').appendChild(this.virtualList.getGui());
 
         if (Utils.exists(this.params.cellHeight)) {
             this.virtualList.setRowHeight(this.params.cellHeight);
@@ -88,8 +83,8 @@ export class RichSelectCellEditor extends Component implements ICellEditor {
 
         this.addGuiEventListener('keydown', this.onKeyDown.bind(this));
 
-        this.addDestroyableEventListener(this.virtualList.getHtmlElement(), 'click', this.onClick.bind(this));
-        this.addDestroyableEventListener(this.virtualList.getHtmlElement(), 'mousemove', this.onMouseMove.bind(this));
+        this.addDestroyableEventListener(this.virtualList.getGui(), 'click', this.onClick.bind(this));
+        this.addDestroyableEventListener(this.virtualList.getGui(), 'mousemove', this.onMouseMove.bind(this));
     }
 
     private onKeyDown(event: KeyboardEvent): void {
@@ -125,15 +120,17 @@ export class RichSelectCellEditor extends Component implements ICellEditor {
     }
 
     private renderSelectedValue(): void {
-        let eValue = <HTMLElement> this.getHtmlElement().querySelector('.ag-rich-select-value');
+        let eValue = <HTMLElement> this.getGui().querySelector('.ag-rich-select-value');
 
         let valueFormatted = this.params.formatValue(this.selectedValue);
 
         if (this.cellRenderer) {
-            let result = this.cellRendererService.useCellRenderer(this.params.column.getColDef(), eValue, {value: this.selectedValue, valueFormatted: valueFormatted});
-            if (result && result.destroy) {
-                this.addDestroyFunc( ()=> result.destroy() );
-            }
+            let rendererPromise:Promise<ICellRendererComp> = this.cellRendererService.useRichSelectCellRenderer(this.params.column.getColDef(), eValue, {value: this.selectedValue, valueFormatted: valueFormatted});
+            rendererPromise.then(renderer=>{
+                if (renderer && renderer.destroy) {
+                    this.addDestroyFunc( ()=> renderer.destroy() );
+                }
+            })
         } else {
             if (Utils.exists(this.selectedValue)) {
                 eValue.innerHTML = valueFormatted;
@@ -166,7 +163,7 @@ export class RichSelectCellEditor extends Component implements ICellEditor {
     }
 
     private onMouseMove(mouseEvent: MouseEvent): void {
-        let rect = this.virtualList.getHtmlElement().getBoundingClientRect();
+        let rect = this.virtualList.getGui().getBoundingClientRect();
         let scrollTop = this.virtualList.getScrollTop();
         let mouseY = mouseEvent.clientY - rect.top + scrollTop;
 
@@ -174,7 +171,7 @@ export class RichSelectCellEditor extends Component implements ICellEditor {
         let value = this.params.values[row];
 
         // not using utils.exist() as want empty string test to pass
-        if (value!==null && value!==undefined) {
+        if (value!==undefined) {
             this.setSelectedValue(value);
         }
     }
@@ -202,7 +199,7 @@ export class RichSelectCellEditor extends Component implements ICellEditor {
         this.virtualList.refresh();
 
         if (this.focusAfterAttached) {
-            this.getHtmlElement().focus();
+            this.getGui().focus();
         }
     }
 

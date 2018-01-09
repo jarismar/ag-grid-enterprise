@@ -4,9 +4,10 @@ import {RowGroupColumnsPanel} from "./columnDrop/rowGroupColumnsPanel";
 import {PivotColumnsPanel} from "./columnDrop/pivotColumnsPanel";
 import {PivotModePanel} from "./columnDrop/pivotModePanel";
 import {ValuesColumnPanel} from "./columnDrop/valueColumnsPanel";
+import {_, IToolPanel} from 'ag-grid';
 
 @Bean('toolPanel')
-export class ToolPanelComp extends Component {
+export class ToolPanelComp extends Component implements IToolPanel {
 
     private static TEMPLATE = '<div class="ag-tool-panel"></div>';
 
@@ -14,6 +15,8 @@ export class ToolPanelComp extends Component {
     @Autowired('gridOptionsWrapper') private gridOptionsWrapper: GridOptionsWrapper;
 
     private initialised = false;
+
+    private childDestroyFuncs: Function[] = [];
 
     constructor() {
         super(ToolPanelComp.TEMPLATE);
@@ -52,9 +55,23 @@ export class ToolPanelComp extends Component {
 
     private addComponent(component: Component): void {
         this.context.wireBean(component);
-        this.getHtmlElement().appendChild(component.getHtmlElement());
-        this.addDestroyFunc( ()=> {
-            component.destroy();
-        });
+        this.getGui().appendChild(component.getGui());
+        this.childDestroyFuncs.push(component.destroy.bind(component))
+    }
+
+    public destroyChildren(): void {
+        this.childDestroyFuncs.forEach(func => func());
+        this.childDestroyFuncs.length = 0;
+        _.removeAllChildren(this.getGui());
+    }
+
+    public refresh(): void {
+        this.destroyChildren();
+        this.init();
+    }
+
+    public destroy(): void {
+        this.destroyChildren();
+        super.destroy();
     }
 }

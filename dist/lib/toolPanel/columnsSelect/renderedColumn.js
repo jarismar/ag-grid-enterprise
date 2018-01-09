@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -35,7 +35,7 @@ var RenderedColumn = (function (_super) {
         this.setTemplate(RenderedColumn.TEMPLATE);
         this.displayName = this.columnController.getDisplayNameForColumn(this.column, 'toolPanel');
         this.eText.innerHTML = this.displayName;
-        this.eIndent.style.width = (this.columnDept * 10) + 'px';
+        this.eIndent.style.width = (this.columnDept * this.gridOptionsWrapper.getCheckboxIndentWidth()) + 'px';
         if (this.allowDragging) {
             this.addDragSource();
         }
@@ -50,10 +50,10 @@ var RenderedColumn = (function (_super) {
         this.addDestroyableEventListener(this.cbSelect, main_1.AgCheckbox.EVENT_CHANGED, this.onChange.bind(this));
         this.addDestroyableEventListener(this.eText, 'click', this.onClick.bind(this));
         this.addTap();
-        main_1.CssClassApplier.addToolPanelClassesFromColDef(this.column.getColDef(), this.getHtmlElement(), this.gridOptionsWrapper, this.column, null);
+        main_1.CssClassApplier.addToolPanelClassesFromColDef(this.column.getColDef(), this.getGui(), this.gridOptionsWrapper, this.column, null);
     };
     RenderedColumn.prototype.addTap = function () {
-        var touchListener = new main_1.TouchListener(this.getHtmlElement());
+        var touchListener = new main_1.TouchListener(this.getGui());
         this.addDestroyableEventListener(touchListener, main_1.TouchListener.EVENT_TAP, this.onClick.bind(this));
         this.addDestroyFunc(touchListener.destroy.bind(touchListener));
     };
@@ -200,7 +200,7 @@ var RenderedColumn = (function (_super) {
         var _this = this;
         var dragSource = {
             type: main_1.DragSourceType.ToolPanel,
-            eElement: this.getHtmlElement(),
+            eElement: this.getGui(),
             dragItemName: this.displayName,
             dragItemCallback: function () { return _this.createDragItem(); }
         };

@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -69,7 +69,7 @@ var ContextMenuFactory = (function () {
         }
         var menu = new ContextMenu(menuItems);
         this.context.wireBean(menu);
-        var eMenuGui = menu.getHtmlElement();
+        var eMenuGui = menu.getGui();
         // need to show filter before positioning, as only after filter
         // is visible can we find out what the width of it is
         var hidePopup = this.popupService.addAsModalPopup(eMenuGui, true, function () { return menu.destroy(); });
@@ -81,8 +81,7 @@ var ContextMenuFactory = (function () {
             ePopup: eMenuGui
         });
         menu.afterGuiAttached({
-            eComponent: eMenuGui,
-            hidePopupCallback: hidePopup
+            hidePopup: hidePopup
         });
     };
     __decorate([
@@ -129,7 +128,7 @@ var ContextMenu = (function (_super) {
         menuList.addEventListener(menuItemComponent_1.MenuItemComponent.EVENT_ITEM_SELECTED, this.destroy.bind(this));
     };
     ContextMenu.prototype.afterGuiAttached = function (params) {
-        this.addDestroyFunc(params.hidePopupCallback);
+        this.addDestroyFunc(params.hidePopup);
         // if the body scrolls, we want to hide the menu, as the menu will not appear in the right location anymore
         this.addDestroyableEventListener(this.eventService, 'bodyScroll', this.destroy.bind(this));
     };

@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -18,9 +18,9 @@ var EnterpriseBoot = (function () {
     function EnterpriseBoot() {
     }
     EnterpriseBoot.prototype.init = function () {
-        this.filterManager.registerFilter('set', setFilter_1.SetFilter);
         this.componentProvider.registerComponent('richSelect', richSelectCellEditor_1.RichSelectCellEditor);
         this.componentProvider.registerComponent('richSelectCellEditor', richSelectCellEditor_1.RichSelectCellEditor);
+        this.componentProvider.registerComponent('setColumnFilter', setFilter_1.SetFilter);
         this.licenseManager.validateLicense();
     };
     __decorate([

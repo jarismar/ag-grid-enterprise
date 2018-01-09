@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -57,7 +57,7 @@ var MenuList = (function (_super) {
         var _this = this;
         var cMenuItem = new menuItemComponent_1.MenuItemComponent(menuItemDef);
         this.context.wireBean(cMenuItem);
-        this.getHtmlElement().appendChild(cMenuItem.getHtmlElement());
+        this.getGui().appendChild(cMenuItem.getGui());
         this.addDestroyFunc(function () { return cMenuItem.destroy(); });
         cMenuItem.addEventListener(menuItemComponent_1.MenuItemComponent.EVENT_ITEM_SELECTED, function (event) {
             if (menuItemDef.subMenu) {
@@ -80,14 +80,14 @@ var MenuList = (function (_super) {
         this.removeActiveItem();
         this.activeMenuItemParams = menuItemParams;
         this.activeMenuItem = menuItem;
-        ag_grid_1.Utils.addCssClass(this.activeMenuItem.getHtmlElement(), 'ag-menu-option-active');
+        ag_grid_1.Utils.addCssClass(this.activeMenuItem.getGui(), 'ag-menu-option-active');
         if (menuItemParams.subMenu) {
             this.addHoverForChildPopup(menuItemParams, menuItem);
         }
     };
     MenuList.prototype.removeActiveItem = function () {
         if (this.activeMenuItem) {
-            ag_grid_1.Utils.removeCssClass(this.activeMenuItem.getHtmlElement(), 'ag-menu-option-active');
+            ag_grid_1.Utils.removeCssClass(this.activeMenuItem.getGui(), 'ag-menu-option-active');
             this.activeMenuItem = null;
             this.activeMenuItemParams = null;
         }
@@ -104,7 +104,7 @@ var MenuList = (function (_super) {
         }, 500);
     };
     MenuList.prototype.addSeparator = function () {
-        this.getHtmlElement().appendChild(ag_grid_1.Utils.loadTemplate(MenuList.SEPARATOR_TEMPLATE));
+        this.getGui().appendChild(ag_grid_1.Utils.loadTemplate(MenuList.SEPARATOR_TEMPLATE));
     };
     MenuList.prototype.showChildMenu = function (menuItemDef, menuItemComp) {
         var _this = this;
@@ -113,7 +113,7 @@ var MenuList = (function (_super) {
         this.context.wireBean(childMenu);
         childMenu.addMenuItems(menuItemDef.subMenu);
         var ePopup = ag_grid_1.Utils.loadTemplate('<div class="ag-menu"></div>');
-        ePopup.appendChild(childMenu.getHtmlElement());
+        ePopup.appendChild(childMenu.getGui());
         var hidePopupFunc = this.popupService.addAsModalPopup(ePopup, true);
         this.popupService.positionPopupForMenu({
             eventSource: menuItemComp.getGui(),

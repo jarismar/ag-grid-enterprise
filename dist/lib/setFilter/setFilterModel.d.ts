@@ -1,9 +1,15 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 import { ColDef } from "ag-grid/main";
+import { IRowModel } from 'ag-grid';
+export declare enum SetFilterModelValuesType {
+    PROVIDED_LIST = 0,
+    PROVIDED_CB = 1,
+    NOT_PROVIDED = 2,
+}
 export declare class SetFilterModel {
     private colDef;
     private filterParams;
-    private rowModel;
+    private inMemoryRowModel;
     private valueGetter;
     private allUniqueValues;
     private availableUniqueValues;
@@ -14,17 +20,21 @@ export declare class SetFilterModel {
     private suppressSorting;
     private formatter;
     private showingAvailableOnly;
-    private usingProvidedSet;
+    private valuesType;
     private doesRowPassOtherFilters;
-    constructor(colDef: ColDef, rowModel: any, valueGetter: any, doesRowPassOtherFilters: any, suppressSorting: boolean);
+    private modelUpdatedFunc;
+    private isLoadingFunc;
+    constructor(colDef: ColDef, rowModel: IRowModel, valueGetter: any, doesRowPassOtherFilters: any, suppressSorting: boolean, modelUpdatedFunc: (values: string[]) => void, isLoadingFunc: (loading: boolean) => void);
     refreshAfterNewRowsLoaded(keepSelection: any, isSelectAll: boolean): void;
     refreshValues(valuesToUse: string[], keepSelection: any, isSelectAll: boolean): void;
     private refreshSelection(keepSelection, isSelectAll);
     refreshAfterAnyFilterChanged(): void;
     private createAllUniqueValues();
-    setUsingProvidedSet(value: boolean): void;
+    private onAsyncValuesLoaded(values);
+    private areValuesSync();
+    setValuesType(value: SetFilterModelValuesType): void;
     private setValues(valuesToUse);
-    private extractValuesToUse();
+    private extractSyncValuesToUse();
     private createAvailableUniqueValues();
     private sortValues(values);
     private getUniqueValues(filterOutNotAvailable);

@@ -1,26 +1,39 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var main_1 = require("ag-grid/main");
 var main_2 = require("ag-grid/main");
+var ag_grid_1 = require("ag-grid");
 // we cannot have 'null' as a key in a JavaScript map,
 // it needs to be a string. so we use this string for
 // storing null values.
 var NULL_VALUE = '___NULL___';
+var SetFilterModelValuesType;
+(function (SetFilterModelValuesType) {
+    SetFilterModelValuesType[SetFilterModelValuesType["PROVIDED_LIST"] = 0] = "PROVIDED_LIST";
+    SetFilterModelValuesType[SetFilterModelValuesType["PROVIDED_CB"] = 1] = "PROVIDED_CB";
+    SetFilterModelValuesType[SetFilterModelValuesType["NOT_PROVIDED"] = 2] = "NOT_PROVIDED";
+})(SetFilterModelValuesType = exports.SetFilterModelValuesType || (exports.SetFilterModelValuesType = {}));
 var SetFilterModel = (function () {
-    function SetFilterModel(colDef, rowModel, valueGetter, doesRowPassOtherFilters, suppressSorting) {
+    function SetFilterModel(colDef, rowModel, valueGetter, doesRowPassOtherFilters, suppressSorting, modelUpdatedFunc, isLoadingFunc) {
         this.suppressSorting = suppressSorting;
         this.colDef = colDef;
-        this.rowModel = rowModel;
         this.valueGetter = valueGetter;
         this.doesRowPassOtherFilters = doesRowPassOtherFilters;
+        this.modelUpdatedFunc = modelUpdatedFunc;
+        this.isLoadingFunc = isLoadingFunc;
+        if (rowModel.getType() === ag_grid_1.Constants.ROW_MODEL_TYPE_IN_MEMORY) {
+            this.inMemoryRowModel = rowModel;
+        }
         this.filterParams = this.colDef.filterParams ? this.colDef.filterParams : {};
-        if (main_1.Utils.exists(this.filterParams)) {
-            this.usingProvidedSet = main_1.Utils.exists(this.filterParams.values);
+        if (main_1.Utils.exists(this.filterParams) && main_1.Utils.exists(this.filterParams.values)) {
+            this.valuesType = Array.isArray(this.filterParams.values) ?
+                SetFilterModelValuesType.PROVIDED_LIST :
+                SetFilterModelValuesType.PROVIDED_CB;
             this.showingAvailableOnly = this.filterParams.suppressRemoveEntries !== true;
         }
         else {
-            this.usingProvidedSet = false;
+            this.valuesType = SetFilterModelValuesType.NOT_PROVIDED;
             this.showingAvailableOnly = true;
         }
         this.createAllUniqueValues();
@@ -68,11 +81,29 @@ var SetFilterModel = (function () {
         }
     };
     SetFilterModel.prototype.createAllUniqueValues = function () {
-        var valuesToUse = this.extractValuesToUse();
-        this.setValues(valuesToUse);
+        if (this.areValuesSync()) {
+            var valuesToUse = this.extractSyncValuesToUse();
+            this.setValues(valuesToUse);
+        }
+        else {
+            this.isLoadingFunc(true);
+            this.setValues([]);
+            var callback = this.filterParams.values;
+            var params = {
+                success: this.onAsyncValuesLoaded.bind(this)
+            };
+            callback(params);
+        }
     };
-    SetFilterModel.prototype.setUsingProvidedSet = function (value) {
-        this.usingProvidedSet = value;
+    SetFilterModel.prototype.onAsyncValuesLoaded = function (values) {
+        this.modelUpdatedFunc(values);
+        this.isLoadingFunc(false);
+    };
+    SetFilterModel.prototype.areValuesSync = function () {
+        return this.valuesType == SetFilterModelValuesType.PROVIDED_LIST || this.valuesType == SetFilterModelValuesType.NOT_PROVIDED;
+    };
+    SetFilterModel.prototype.setValuesType = function (value) {
+        this.valuesType = value;
     };
     SetFilterModel.prototype.setValues = function (valuesToUse) {
         this.allUniqueValues = valuesToUse;
@@ -80,10 +111,13 @@ var SetFilterModel = (function () {
             this.sortValues(this.allUniqueValues);
         }
     };
-    SetFilterModel.prototype.extractValuesToUse = function () {
+    SetFilterModel.prototype.extractSyncValuesToUse = function () {
         var valuesToUse;
-        if (this.usingProvidedSet) {
+        if (this.valuesType == SetFilterModelValuesType.PROVIDED_LIST) {
             valuesToUse = main_1.Utils.toStrings(this.filterParams.values);
+        }
+        else if (this.valuesType == SetFilterModelValuesType.PROVIDED_CB) {
+            throw Error("ag-grid: Error extracting values to use. We should not extract the values synchronously when using a callback for the filterParams.values");
         }
         else {
             var uniqueValuesAsAnyObjects = this.getUniqueValues(false);
@@ -92,7 +126,7 @@ var SetFilterModel = (function () {
         return valuesToUse;
     };
     SetFilterModel.prototype.createAvailableUniqueValues = function () {
-        var dontCheckAvailableValues = !this.showingAvailableOnly || this.usingProvidedSet;
+        var dontCheckAvailableValues = !this.showingAvailableOnly || this.valuesType == SetFilterModelValuesType.PROVIDED_LIST || this.valuesType == SetFilterModelValuesType.PROVIDED_CB;
         if (dontCheckAvailableValues) {
             this.availableUniqueValues = this.allUniqueValues;
             return;
@@ -116,32 +150,34 @@ var SetFilterModel = (function () {
         var _this = this;
         var uniqueCheck = {};
         var result = [];
-        if (!this.rowModel.forEachLeafNode) {
+        if (!this.inMemoryRowModel) {
             console.error('ag-Grid: Set Filter cannot initialise because you are using a row model that does not contain all rows in the browser. Either use a different filter type, or configure Set Filter such that you provide it with values');
             return [];
         }
-        this.rowModel.forEachLeafNode(function (node) {
-            if (!node.group) {
-                var value = _this.valueGetter(node);
-                if (_this.colDef.keyCreator) {
-                    value = _this.colDef.keyCreator({ value: value });
+        this.inMemoryRowModel.forEachLeafNode(function (node) {
+            // only pull values from rows that have data. this means we skip filler group nodes.
+            if (!node.data) {
+                return;
+            }
+            var value = _this.valueGetter(node);
+            if (_this.colDef.keyCreator) {
+                value = _this.colDef.keyCreator({ value: value });
+            }
+            if (value === "" || value === undefined) {
+                value = null;
+            }
+            if (filterOutNotAvailable) {
+                if (!_this.doesRowPassOtherFilters(node)) {
+                    return;
                 }
-                if (value === "" || value === undefined) {
-                    value = null;
+            }
+            if (value != null && Array.isArray(value)) {
+                for (var j = 0; j < value.length; j++) {
+                    addUniqueValueIfMissing(value[j]);
                 }
-                if (filterOutNotAvailable) {
-                    if (!_this.doesRowPassOtherFilters(node)) {
-                        return;
-                    }
-                }
-                if (value != null && Array.isArray(value)) {
-                    for (var j = 0; j < value.length; j++) {
-                        addUniqueValueIfMissing(value[j]);
-                    }
-                }
-                else {
-                    addUniqueValueIfMissing(value);
-                }
+            }
+            else {
+                addUniqueValueIfMissing(value);
             }
         });
         function addUniqueValueIfMissing(value) {

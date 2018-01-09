@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -33,11 +33,7 @@ var VirtualList = (function (_super) {
         this.setTemplate(VirtualList.TEMPLATE);
         this.eListContainer = this.queryForHtmlElement(".ag-virtual-list-container");
         this.addScrollListener();
-        // Material data table has strict guidelines about whitespace, and these values are different than the ones
-        // ag-grid uses by default. We override the default ones for the sake of making it better out of the box
-        if (this.environment.getTheme() == "ag-material-next") {
-            this.rowHeight = 32;
-        }
+        this.rowHeight = this.gridOptionsWrapper.getVirtualItemHeight();
     };
     VirtualList.prototype.ensureIndexVisible = function (index) {
         var lastRow = this.model.getRowCount();
@@ -48,19 +44,19 @@ var VirtualList = (function (_super) {
         // let nodeAtIndex = this.rowModel.getRow(index);
         var rowTopPixel = index * this.rowHeight;
         var rowBottomPixel = rowTopPixel + this.rowHeight;
-        var viewportTopPixel = this.getHtmlElement().scrollTop;
-        var viewportHeight = this.getHtmlElement().offsetHeight;
+        var viewportTopPixel = this.getGui().scrollTop;
+        var viewportHeight = this.getGui().offsetHeight;
         var viewportBottomPixel = viewportTopPixel + viewportHeight;
         var viewportScrolledPastRow = viewportTopPixel > rowTopPixel;
         var viewportScrolledBeforeRow = viewportBottomPixel < rowBottomPixel;
         if (viewportScrolledPastRow) {
             // if row is before, scroll up with row at top
-            this.getHtmlElement().scrollTop = rowTopPixel;
+            this.getGui().scrollTop = rowTopPixel;
         }
         else if (viewportScrolledBeforeRow) {
             // if row is below, scroll down with row at bottom
             var newScrollPosition = rowBottomPixel - viewportHeight;
-            this.getHtmlElement().scrollTop = newScrollPosition;
+            this.getGui().scrollTop = newScrollPosition;
         }
     };
     VirtualList.prototype.setComponentCreator = function (componentCreator) {
@@ -70,7 +66,7 @@ var VirtualList = (function (_super) {
         return this.rowHeight;
     };
     VirtualList.prototype.getScrollTop = function () {
-        return this.getHtmlElement().scrollTop;
+        return this.getGui().scrollTop;
     };
     VirtualList.prototype.setRowHeight = function (rowHeight) {
         this.rowHeight = rowHeight;
@@ -89,8 +85,8 @@ var VirtualList = (function (_super) {
         this.removeVirtualRows(rowsToRemove);
     };
     VirtualList.prototype.drawVirtualRows = function () {
-        var topPixel = this.getHtmlElement().scrollTop;
-        var bottomPixel = topPixel + this.getHtmlElement().offsetHeight;
+        var topPixel = this.getGui().scrollTop;
+        var bottomPixel = topPixel + this.getGui().offsetHeight;
         var firstRow = Math.floor(topPixel / this.rowHeight);
         var lastRow = Math.floor(bottomPixel / this.rowHeight);
         this.ensureRowsRendered(firstRow, lastRow);
@@ -131,7 +127,7 @@ var VirtualList = (function (_super) {
         main_1.Utils.addCssClass(eDiv, 'ag-virtual-list-item');
         eDiv.style.top = (this.rowHeight * rowIndex) + "px";
         var rowComponent = this.componentCreator(value);
-        eDiv.appendChild(rowComponent.getHtmlElement());
+        eDiv.appendChild(rowComponent.getGui());
         this.eListContainer.appendChild(eDiv);
         this.rowsInBodyContainer[rowIndex] = {
             rowComponent: rowComponent,
@@ -155,6 +151,10 @@ var VirtualList = (function (_super) {
         main_1.Autowired('environment'),
         __metadata("design:type", main_1.Environment)
     ], VirtualList.prototype, "environment", void 0);
+    __decorate([
+        main_1.Autowired('gridOptionsWrapper'),
+        __metadata("design:type", main_1.GridOptionsWrapper)
+    ], VirtualList.prototype, "gridOptionsWrapper", void 0);
     __decorate([
         main_1.PostConstruct,
         __metadata("design:type", Function),

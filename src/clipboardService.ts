@@ -30,6 +30,7 @@ import {
     Column,
     Constants,
     FlashCellsEvent,
+    _,
     ColumnApi,
     GridApi
 } from "ag-grid/main";
@@ -205,7 +206,9 @@ export class ClipboardService implements IClipboardService {
         let rowCallback = (gridRow: GridRow, rowNode: RowNode, columns: Column[]) => {
             updatedRowNodes.push(rowNode);
             columns.forEach((column) => {
-                this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds, Constants.EXPORT_TYPE_CLIPBOARD);
+                if (column.isCellEditable(rowNode)) {
+                    this.updateCellValue(rowNode, column, value, currentRow, cellsToFlash, updatedColumnIds, Constants.EXPORT_TYPE_CLIPBOARD);
+                }
             })
         };
         this.iterateActiveRanges(false, rowCallback);
@@ -385,21 +388,23 @@ export class ClipboardService implements IClipboardService {
         dataObj.colDefs.push(column.getColDef());
 
         let processedValue = this.userProcessCell(rowNode, column, value, this.gridOptionsWrapper.getProcessCellForClipboardFunc(), Constants.EXPORT_TYPE_CLIPBOARD);
-        if (Utils.exists(processedValue)) {
 
-            let data = '';
-            if (includeHeaders) {
-                let heading = this.columnController.getDisplayNameForColumn(column, 'clipboard', true); // added by ADP-e
-                data = heading + '\r\n'; // added by ADP-e
-                dataObj.headings.push(heading); // added by ADP-e
-            }
-            data += processedValue.toString();
-            dataObj.rows.push([data]); // added by ADP-e
-
-            this.copyDataToClipboard(data, dataObj);
-        } else {
-            this.copyDataToClipboard('');
+        if (_.missing(processedValue)) {
+            // copy the new line character to clipboard instead of an empty string, as the 'execCommand' will ignore it.
+            // this behaviour is consistent with how Excel works!
+            processedValue = '\n';
         }
+
+        let data = '';
+        if (includeHeaders) {
+            let heading = this.columnController.getDisplayNameForColumn(column, 'clipboard', true); // added by ADP-e
+            data = heading + '\r\n'; // changed by ADP-e
+            dataObj.headings.push(heading); // added by ADP-e
+        }
+        data += processedValue.toString();
+        dataObj.rows.push([data]); // added by ADP-e
+
+        this.copyDataToClipboard(data, dataObj);
 
         let cellId = focusedCell.createId();
         let cellsToFlash = {};
@@ -594,9 +599,9 @@ export class ClipboardService implements IClipboardService {
     }
 
     // From http://stackoverflow.com/questions/1293147/javascript-code-to-parse-csv-data
-    // This will parse a delimited string into an array of
-    // arrays. The default delimiter is the comma, but this
-    // can be overriden in the second argument.
+    // This will parse a delimited string into an array of arrays.
+    // Note: this code fixes an issue with the example posted on stack overflow where it doesn't correctly handle
+    // empty values in the first cell.
     private dataToArray(strData: string): string[][] {
         let delimiter = this.gridOptionsWrapper.getClipboardDeliminator();
 
@@ -617,30 +622,32 @@ export class ClipboardService implements IClipboardService {
         // a default empty first row.
         let arrData: string[][] = [[]];
 
-        // Create an array to hold our individual pattern
-        // matching groups.
-        let arrMatches: string[] = null;
+        // Create an array to hold our individual pattern matching groups.
+        let arrMatches: string[];
+
+        // Required for handling edge case on first row copy
+        let atFirstRow = true;
 
         // Keep looping over the regular expression matches
         // until we can no longer find a match.
-        while (arrMatches = objPattern.exec( strData )){
+        while (arrMatches = objPattern.exec( strData )) {
 
             // Get the delimiter that was found.
             let strMatchedDelimiter = arrMatches[ 1 ];
+
+            // Handles case when first row is an empty cell, insert an empty string before delimiter
+            if (atFirstRow && strMatchedDelimiter) {
+                arrData[0].push("");
+            }
 
             // Check to see if the given delimiter has a length
             // (is not the start of string) and if it matches
             // field delimiter. If id does not, then we know
             // that this delimiter is a row delimiter.
-            if (
-                strMatchedDelimiter.length &&
-                strMatchedDelimiter !== delimiter
-            ) {
-
+            if (strMatchedDelimiter.length && strMatchedDelimiter !== delimiter) {
                 // Since we have reached a new row of data,
                 // add an empty row to our data array.
                 arrData.push( [] );
-
             }
 
             let strMatchedValue: string;
@@ -648,26 +655,20 @@ export class ClipboardService implements IClipboardService {
             // Now that we have our delimiter out of the way,
             // let's check to see which kind of value we
             // captured (quoted or unquoted).
-            if (arrMatches[ 2 ]){
-
+            if (arrMatches[ 2 ]) {
                 // We found a quoted value. When we capture
-                // this value, unescape any double quotes.
-                strMatchedValue = arrMatches[ 2 ].replace(
-                    new RegExp( "\"\"", "g" ),
-                    "\""
-                );
-
+                // this value, unescaped any double quotes.
+                strMatchedValue = arrMatches[ 2 ].replace(new RegExp( "\"\"", "g" ), "\"");
             } else {
-
                 // We found a non-quoted value.
                 strMatchedValue = arrMatches[ 3 ];
-
             }
-
 
             // Now that we have our value string, let's add
             // it to the data array.
-            arrData[ arrData.length - 1 ].push( strMatchedValue );
+            arrData[ arrData.length - 1 ].push(strMatchedValue);
+
+            atFirstRow = false;
         }
 
         // Return the parsed data.

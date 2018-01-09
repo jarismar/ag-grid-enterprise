@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 import { IRowNodeStage, StageExecuteParams } from "ag-grid/main";
 export declare class AggregationStage implements IRowNodeStage {
     private gridOptionsWrapper;
@@ -7,10 +7,11 @@ export declare class AggregationStage implements IRowNodeStage {
     private pivotStage;
     private aggFuncService;
     execute(params: StageExecuteParams): any;
-    private recursivelyCreateAggData(rowNode, changedPath, measureColumns, pivotColumns);
-    private aggregateRowNode(rowNode, changedPath, measureColumns, pivotColumns);
+    private createAggDetails(params);
+    private recursivelyCreateAggData(rowNode, aggDetails);
+    private aggregateRowNode(rowNode, aggDetails);
     private aggregateRowNodeUsingValuesAndPivot(rowNode);
-    private aggregateRowNodeUsingValuesOnly(rowNode, changedPath, valueColumns);
+    private aggregateRowNodeUsingValuesOnly(rowNode, aggDetails);
     private getValuesPivotNonLeaf(rowNode, colId);
     private getValuesFromMappedSet(mappedSet, keys, valueColumn);
     private getValuesNormal(rowNode, valueColumns);

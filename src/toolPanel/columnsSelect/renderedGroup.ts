@@ -84,7 +84,7 @@ export class RenderedGroup extends Component {
         this.setupExpandContract();
 
         let eIndent = this.queryForHtmlElement('#eIndent');
-        eIndent.style.width = (this.columnDept * 10) + 'px';
+        eIndent.style.width = (this.columnDept * this.gridOptionsWrapper.getCheckboxIndentWidth()) + 'px';
 
         this.addDestroyableEventListener(eText, 'click', this.onClick.bind(this) );
         this.addDestroyableEventListener(this.eventService, Events.EVENT_COLUMN_PIVOT_MODE_CHANGED, this.onColumnStateChanged.bind(this) );
@@ -104,7 +104,7 @@ export class RenderedGroup extends Component {
         this.onColumnStateChanged();
         this.addVisibilityListenersToAllChildren();
 
-        CssClassApplier.addToolPanelClassesFromColDef(this.columnGroup.getColGroupDef(), this.getHtmlElement(), this.gridOptionsWrapper, null, this.columnGroup);
+        CssClassApplier.addToolPanelClassesFromColDef(this.columnGroup.getColGroupDef(), this.getGui(), this.gridOptionsWrapper, null, this.columnGroup);
     }
 
     private addVisibilityListenersToAllChildren(): void {
@@ -119,7 +119,7 @@ export class RenderedGroup extends Component {
     private addDragSource(): void {
         let dragSource: DragSource = {
             type: DragSourceType.ToolPanel,
-            eElement: this.getHtmlElement(),
+            eElement: this.getGui(),
             dragItemName: this.displayName,
             dragItemCallback: () => this.createDragItem()
         };

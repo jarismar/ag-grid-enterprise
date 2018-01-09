@@ -14,9 +14,28 @@ import {
     SelectionController,
     StageExecuteParams,
     ValueService,
-    ChangedPath
+    ChangedPath,
+    GetDataPath,
+    PostConstruct
 } from "ag-grid/main";
 
+interface GroupInfo {
+    key: any; // e.g. 'Ireland'
+    field: string; // e.g. 'country'
+    rowGroupColumn: Column
+}
+
+interface GroupingDetails {
+    pivotMode: boolean;
+    includeParents: boolean;
+    expandByDefault: number;
+    changedPath: ChangedPath;
+    rootNode: RowNode;
+    groupedCols: Column[];
+    groupedColCount: number;
+    transaction: RowNodeTransaction;
+    rowNodeOrder: {[id: string]: number};
+}
 
 @Bean('groupStage')
 export class GroupStage implements IRowNodeStage {
@@ -27,6 +46,11 @@ export class GroupStage implements IRowNodeStage {
     @Autowired('valueService') private valueService: ValueService;
     @Autowired('eventService') private eventService: EventService;
     @Autowired('context') private context: Context;
+
+    // if doing tree data, this is true. we set this at create time - as our code does not
+    // cater for the scenario where this is switched on / off dynamically
+    private usingTreeData: boolean;
+    private getDataPath: GetDataPath;
 
     // we use a sequence variable so that each time we do a grouping, we don't
     // reuse the ids - otherwise the rowRenderer will confuse rowNodes between redraws
@@ -40,166 +64,411 @@ export class GroupStage implements IRowNodeStage {
     // rowNode.childrenMapped: string=>RowNode = children mapped by group key (when groups) or an empty map if leaf group (this is then used by pivot)
     // for leaf groups, rowNode.childrenAfterGroup = rowNode.allLeafChildren;
 
+    @PostConstruct
+    private postConstruct(): void {
+        this.usingTreeData = this.gridOptionsWrapper.isTreeData();
+        if (this.usingTreeData) {
+            this.getDataPath = this.gridOptionsWrapper.getDataPathFunc();
+            if (_.missing(this.getDataPath)) {
+                console.warn('ag-Grid: property usingTreeData=true, but you did not provide getDataPath function, please provide getDataPath function if using tree data.')
+            }
+        }
+    }
+
     public execute(params: StageExecuteParams): void {
 
-        let {rowNode, changedPath, rowNodeTransaction} = params;
+        let details = this.createGroupingDetails(params);
 
-        let groupedCols = this.columnController.getRowGroupColumns();
-        let expandByDefault: number;
-
-        if (this.gridOptionsWrapper.isGroupSuppressRow()) {
-            expandByDefault = -1;
+        if (details.transaction) {
+            this.handleTransaction(details);
         } else {
-            expandByDefault = this.gridOptionsWrapper.getGroupDefaultExpanded();
-        }
-
-        let includeParents = !this.gridOptionsWrapper.isSuppressParentsInRowNodes();
-        let isPivot = this.columnController.isPivotMode();
-
-        let isGrouping = groupedCols.length > 0;
-
-        // important not to do transaction if we are not grouping, as otherwise the 'insert index' is ignored.
-        // ie, if not grouping, then we just want to shotgun so the rootNode.allLeafChildren gets copied
-        // to rootNode.childrenAfterGroup and maintaining order (as delta transaction misses the order).
-        let doTransaction = isGrouping && _.exists(rowNodeTransaction);
-        if (doTransaction) {
-            this.handleTransaction(rowNodeTransaction, changedPath, rowNode, groupedCols, expandByDefault, includeParents, isPivot);
-        } else {
-            this.shotgunResetEverything(rowNode, groupedCols, expandByDefault, includeParents, isPivot);
+            this.shotgunResetEverything(details);
         }
     }
 
-    private handleTransaction(tran: RowNodeTransaction, changedPath: ChangedPath, rootNode: RowNode, groupedCols: Column[], expandByDefault: number, includeParents: boolean, isPivot: boolean): void {
+    private createGroupingDetails(params: StageExecuteParams): GroupingDetails {
+        let {rowNode, changedPath, rowNodeTransaction, rowNodeOrder} = params;
+
+        let groupedCols = this.usingTreeData ? null : this.columnController.getRowGroupColumns();
+        let isGrouping = this.usingTreeData || groupedCols.length > 0;
+        let usingTransaction = isGrouping && _.exists(rowNodeTransaction);
+
+        let details = <GroupingDetails> {
+            // someone complained that the parent attribute was causing some change detection
+            // to break is some angular add-on - which i never used. taking the parent out breaks
+            // a cyclic dependency, hence this flag got introduced.
+            includeParents: !this.gridOptionsWrapper.isSuppressParentsInRowNodes(),
+            expandByDefault: this.gridOptionsWrapper.isGroupSuppressRow() ?
+                -1 : this.gridOptionsWrapper.getGroupDefaultExpanded(),
+            groupedCols: groupedCols,
+            rootNode: rowNode,
+            pivotMode: this.columnController.isPivotMode(),
+            groupedColCount: this.usingTreeData ? 0 : groupedCols.length,
+            rowNodeOrder: rowNodeOrder,
+
+            // important not to do transaction if we are not grouping, as otherwise the 'insert index' is ignored.
+            // ie, if not grouping, then we just want to shotgun so the rootNode.allLeafChildren gets copied
+            // to rootNode.childrenAfterGroup and maintaining order (as delta transaction misses the order).
+            transaction: usingTransaction ? rowNodeTransaction : null,
+
+            // if no transaction, then it's shotgun, so no changed path
+            changedPath: usingTransaction ? changedPath : null
+        };
+
+        return details;
+    }
+
+    private handleTransaction(details: GroupingDetails): void {
+        let tran = details.transaction;
         if (tran.add) {
-            this.insertRowNodesIntoGroups(tran.add, changedPath, rootNode, groupedCols, expandByDefault, includeParents, isPivot);
+            this.insertNodes(tran.add, details);
         }
         if (tran.update) {
-            // the InMemoryNodeManager already updated the value, however we
-            // need to check the grouping, in case a dimension changed.
-            this.checkParents(tran.update, changedPath, rootNode, groupedCols, expandByDefault, includeParents, isPivot);
+            this.moveNodesInWrongPath(tran.update, details);
         }
         if (tran.remove) {
-            this.removeRowNodesFromGroups(tran.remove, changedPath, rootNode);
+            this.removeNodes(tran.remove, details);
+        }
+        if (details.rowNodeOrder) {
+            this.recursiveSortChildren(details.rootNode, details);
         }
     }
 
-    private checkParents(leafRowNodes: RowNode[], changedPath: ChangedPath, rootNode: RowNode,
-                         groupColumns: Column[], expandByDefault: any, includeParents: boolean, isPivot: boolean): void {
-
-        leafRowNodes.forEach( (nodeToPlace: RowNode) => {
-
-            // always add existing parent, as if row is moved, then old parent needs
-            // to be recomputed
-            if (changedPath) {
-                changedPath.addParentNode(nodeToPlace.parent);
+    // this is used when doing delta updates, eg Redux, keeps nodes in right order
+    private recursiveSortChildren(node: RowNode, details: GroupingDetails): void {
+        _.sortRowNodesByOrder(node.childrenAfterGroup, details.rowNodeOrder);
+        node.childrenAfterGroup.forEach( childNode => {
+            if (childNode.childrenAfterGroup) {
+                this.recursiveSortChildren(childNode, details)
             }
+        } );
+    }
 
-            let groupKeys = groupColumns.map( col => this.getKeyForNode(col, nodeToPlace) );
+    private getExistingPathForNode(node: RowNode, details: GroupingDetails): GroupInfo[] {
+        let res: GroupInfo[] = [];
 
-            let parent = nodeToPlace.parent;
-            let keysMatch = true;
-
-            groupKeys.forEach( (key: string) => {
-                if (parent.key !== key) {
-                    keysMatch = false;
-                }
-                parent = parent.parent;
+        // when doing tree data, the node is part of the path,
+        // but when doing grid grouping, the node is not part of the path so we start with the parent.
+        let pointer = this.usingTreeData ? node : node.parent;
+        while (pointer !== details.rootNode) {
+            res.push({
+                key: pointer.key,
+                rowGroupColumn: pointer.rowGroupColumn,
+                field: pointer.field
             });
+            pointer = pointer.parent;
+        }
+        res.reverse();
+        return res;
+    }
 
-            if (!keysMatch) {
-                this.removeRowNodeFromGroups(nodeToPlace, rootNode);
-                this.insertRowNodeIntoGroups(nodeToPlace, rootNode, groupColumns, expandByDefault, includeParents, isPivot);
+    private moveNodesInWrongPath(childNodes: RowNode[], details: GroupingDetails): void {
 
-                // add in new parent
-                if (changedPath) {
-                    changedPath.addParentNode(nodeToPlace.parent);
-                }
+        childNodes.forEach( childNode => {
+
+            // we add node, even if parent has not changed, as the data could have
+            // changed, hence aggregations will be wrong
+            if (details.changedPath) {
+                details.changedPath.addParentNode(childNode.parent);
+            }
+
+            let infoToKeyMapper = (item: GroupInfo) => item.key;
+            let oldPath: string[] = this.getExistingPathForNode(childNode, details).map(infoToKeyMapper);
+            let newPath: string[] = this.getGroupInfo(childNode, details).map(infoToKeyMapper);
+
+            let nodeInCorrectPath = _.compareArrays(oldPath, newPath);
+
+            if (!nodeInCorrectPath) {
+                this.moveNode(childNode, details);
             }
         });
     }
 
-    private removeRowNodesFromGroups(leafRowNodes: RowNode[], changedPath: ChangedPath, rootNode: RowNode): void {
-        leafRowNodes.forEach( leafToRemove => {
-            this.removeRowNodeFromGroups(leafToRemove, rootNode);
-            if (changedPath) {
-                changedPath.addParentNode(leafToRemove.parent);
-            }
-        });
-    }
+    private moveNode(childNode: RowNode, details: GroupingDetails): void {
 
-    private removeRowNodeFromGroups(leafToRemove: RowNode, rootNode: RowNode): void {
+        this.removeOneNode(childNode, details);
+        this.insertOneNode(childNode, details);
 
-        // step 1 - remove leaf from direct parent
-        _.removeFromArray(leafToRemove.parent.childrenAfterGroup, leafToRemove);
-
-        // step 2 - go up the row group hierarchy and:
-        //  a) remove from allLeafChildren
-        //  b) remove empty groups
-        let groupPointer = leafToRemove.parent;
-        while (groupPointer !== rootNode) {
-            _.removeFromArray(groupPointer.allLeafChildren, leafToRemove);
-
-            let isEmptyGroup = groupPointer.allLeafChildren.length===0;
-            if (isEmptyGroup) {
-                this.removeGroupFromParent(groupPointer);
-            }
-
-            groupPointer = groupPointer.parent;
+        // we add both old and new parents to changed path, as both will need to be refreshed.
+        // we already added the old parent (in calling method), so just add the new parent here
+        if (details.changedPath) {
+            let newParent = childNode.parent;
+            details.changedPath.addParentNode(newParent);
         }
     }
 
-    private removeGroupFromParent(groupPointer: RowNode) {
-        _.removeFromArray(groupPointer.parent.childrenAfterGroup, groupPointer);
-        groupPointer.parent.childrenMapped[groupPointer.key] = undefined;
+    private removeNodes(leafRowNodes: RowNode[], details: GroupingDetails): void {
+        leafRowNodes.forEach( leafToRemove => {
+            this.removeOneNode(leafToRemove, details);
+            if (details.changedPath) {
+                details.changedPath.addParentNode(leafToRemove.parent);
+            }
+        });
     }
 
-    private shotgunResetEverything(rootNode: RowNode, groupedCols: Column[], expandByDefault: number, includeParents: boolean, isPivot: boolean): void {
+    private removeOneNode(childNode: RowNode, details: GroupingDetails): void {
+
+        // utility func to execute once on each parent node
+        let forEachParentGroup = ( callback:  (parent: RowNode)=>void ) => {
+            let pointer = childNode.parent;
+            while (pointer !== details.rootNode) {
+                callback(pointer);
+                pointer = pointer.parent;
+            }
+        };
+
+        // remove leaf from direct parent
+        this.removeFromParent(childNode);
+
+        // remove from allLeafChildren
+        forEachParentGroup(parentNode => _.removeFromArray(parentNode.allLeafChildren, childNode));
+
+        // if not group, and children are present, need to move children to a group.
+        // otherwise if no children, we can just remove without replacing.
+        let replaceWithGroup = childNode.hasChildren();
+        if (replaceWithGroup) {
+            let oldPath = this.getExistingPathForNode(childNode, details);
+            // because we just removed the userGroup, this will always return new support group
+            let newGroupNode = this.findParentForNode(childNode, oldPath, details);
+
+            // these properties are the ones that will be incorrect in the newly created group,
+            // so copy them form the old childNode
+            newGroupNode.expanded = childNode.expanded;
+            newGroupNode.allLeafChildren = childNode.allLeafChildren;
+            newGroupNode.childrenAfterGroup = childNode.childrenAfterGroup;
+            newGroupNode.childrenMapped = childNode.childrenMapped;
+
+            newGroupNode.childrenAfterGroup.forEach( rowNode => rowNode.parent = newGroupNode);
+        }
+
+        // remove empty groups
+        forEachParentGroup( node => {
+            if (node.isEmptyFillerNode()) {
+                this.removeFromParent(node);
+                // we remove selection on filler nodes here, as the selection would not be removed
+                // from the RowNodeManager, as filler nodes don't exist on teh RowNodeManager
+                node.setSelected(false);
+            }
+        });
+    }
+
+    private removeFromParent(child: RowNode) {
+        _.removeFromArray(child.parent.childrenAfterGroup, child);
+        let mapKey = this.getChildrenMappedKey(child.key, child.rowGroupColumn);
+        child.parent.childrenMapped[mapKey] = undefined;
+        // this is important for transition, see rowComp removeFirstPassFuncs. when doing animation and
+        // remove, if rowTop is still present, the rowComp thinks it's just moved position.
+        child.setRowTop(null);
+    }
+
+    private addToParent(child: RowNode, parent: RowNode) {
+        let mapKey = this.getChildrenMappedKey(child.key, child.rowGroupColumn);
+        parent.childrenMapped[mapKey] = child;
+        parent.childrenAfterGroup.push(child);
+    }
+
+    private shotgunResetEverything(details: GroupingDetails): void {
         // because we are not creating the root node each time, we have the logic
         // here to change leafGroup once.
-        rootNode.leafGroup = groupedCols.length === 0;
+        // we set .leafGroup to false for tree data, as .leafGroup is only used when pivoting, and pivoting
+        // isn't allowed with treeData, so the grid never actually use .leafGroup when doing treeData.
+        details.rootNode.leafGroup = this.usingTreeData ? false : details.groupedCols.length === 0;
 
         // we are going everything from scratch, so reset childrenAfterGroup and childrenMapped from the rootNode
-        rootNode.childrenAfterGroup = [];
-        rootNode.childrenMapped = {};
+        details.rootNode.childrenAfterGroup = [];
+        details.rootNode.childrenMapped = {};
 
-        this.insertRowNodesIntoGroups(rootNode.allLeafChildren, null, rootNode, groupedCols, expandByDefault, includeParents, isPivot);
+        this.insertNodes(details.rootNode.allLeafChildren, details);
     }
 
-    private insertRowNodesIntoGroups(newRowNodes: RowNode[], changedPath: ChangedPath, rootNode: RowNode, groupColumns: Column[], expandByDefault: any, includeParents: boolean, isPivot: boolean): void {
+    private insertNodes(newRowNodes: RowNode[], details: GroupingDetails): void {
         newRowNodes.forEach( rowNode => {
-            this.insertRowNodeIntoGroups(rowNode, rootNode, groupColumns, expandByDefault, includeParents, isPivot);
-            if (changedPath) {
-                changedPath.addParentNode(rowNode.parent);
+            this.insertOneNode(rowNode, details);
+            if (details.changedPath) {
+                details.changedPath.addParentNode(rowNode.parent);
             }
         });
     }
 
-    private insertRowNodeIntoGroups(rowNode: RowNode, rootNode: RowNode, groupColumns: Column[], expandByDefault: any, includeParents: boolean, isPivot: boolean): void {
-        let nextGroup: RowNode = rootNode;
-        groupColumns.forEach( (groupColumn, level) => {
-            nextGroup = this.getOrCreateNextGroup(nextGroup, rowNode, groupColumn, expandByDefault, level, includeParents, groupColumns.length, isPivot);
-            // node gets added to all group nodes.
-            // note: we do not add to rootNode here, as the rootNode is the master list of rowNodes, not impacted by grouping
-            nextGroup.allLeafChildren.push(rowNode);
-        });
-        rowNode.parent = nextGroup;
-        rowNode.level = groupColumns.length;
-        nextGroup.childrenAfterGroup.push(rowNode);
-    }
+    private insertOneNode(childNode: RowNode, details: GroupingDetails): void {
 
-    private getOrCreateNextGroup(parentGroup: RowNode, nodeToPlace: RowNode, groupColumn: Column, expandByDefault: any,
-                                 level: number, includeParents: boolean, numberOfGroupColumns: number, isPivot: boolean): RowNode {
-        let groupKey : string = this.getKeyForNode(groupColumn, nodeToPlace);
+        let path: GroupInfo[] = this.getGroupInfo(childNode, details);
 
-        let nextGroup = <RowNode> parentGroup.childrenMapped[groupKey];
-        if (!nextGroup) {
-            nextGroup = this.createSubGroup(groupKey, groupColumn, parentGroup, expandByDefault, level, includeParents, numberOfGroupColumns, isPivot);
-            // attach the new group to the parent
-            parentGroup.childrenMapped[groupKey] = nextGroup;
-            parentGroup.childrenAfterGroup.push(nextGroup);
+        let parentGroup = this.findParentForNode(childNode, path, details);
+
+        if (!parentGroup.group) {
+            console.warn(`ag-Grid: duplicate group keys for row data, keys should be unique`,
+                [parentGroup.data, childNode.data]);
         }
 
-        return nextGroup;
+        if (this.usingTreeData) {
+            this.swapGroupWithUserNode(parentGroup, childNode);
+        } else {
+            childNode.parent = parentGroup;
+            childNode.level = path.length;
+            parentGroup.childrenAfterGroup.push(childNode);
+        }
+    }
+
+    private findParentForNode(childNode: RowNode, path: GroupInfo[], details: GroupingDetails): RowNode {
+        let nextNode: RowNode = details.rootNode;
+
+        path.forEach( (groupInfo, level) => {
+            nextNode = this.getOrCreateNextNode(nextNode, groupInfo, level, details);
+            // node gets added to all group nodes.
+            // note: we do not add to rootNode here, as the rootNode is the master list of rowNodes
+            nextNode.allLeafChildren.push(childNode);
+        });
+
+        return nextNode;
+    }
+
+    private swapGroupWithUserNode(fillerGroup: RowNode, userGroup: RowNode) {
+        userGroup.parent = fillerGroup.parent;
+        userGroup.key = fillerGroup.key;
+        userGroup.field = fillerGroup.field;
+        userGroup.groupData = fillerGroup.groupData;
+        userGroup.level = fillerGroup.level;
+        userGroup.expanded = fillerGroup.expanded;
+
+        // we set .leafGroup to false for tree data, as .leafGroup is only used when pivoting, and pivoting
+        // isn't allowed with treeData, so the grid never actually use .leafGroup when doing treeData.
+        userGroup.leafGroup = fillerGroup.leafGroup;
+
+        // always null for userGroups, as row grouping is not allowed when doing tree data
+        userGroup.rowGroupIndex = fillerGroup.rowGroupIndex;
+
+        userGroup.allLeafChildren = fillerGroup.allLeafChildren;
+        userGroup.childrenAfterGroup = fillerGroup.childrenAfterGroup;
+        userGroup.childrenMapped = fillerGroup.childrenMapped;
+
+        this.removeFromParent(fillerGroup);
+        userGroup.childrenAfterGroup.forEach( rowNode => rowNode.parent = userGroup);
+        this.addToParent(userGroup, fillerGroup.parent);
+    }
+
+    private getOrCreateNextNode(parentGroup: RowNode, groupInfo: GroupInfo, level: number,
+                                details: GroupingDetails): RowNode {
+
+        let mapKey = this.getChildrenMappedKey(groupInfo.key, groupInfo.rowGroupColumn);
+        let nextNode = <RowNode> parentGroup.childrenMapped[mapKey];
+        if (!nextNode) {
+            nextNode = this.createGroup(groupInfo, parentGroup, level, details);
+            // attach the new group to the parent
+            this.addToParent(nextNode, parentGroup);
+        }
+
+        return nextNode;
+    }
+
+    private createGroup(groupInfo: GroupInfo, parent: RowNode, level: number, details: GroupingDetails): RowNode {
+        let groupNode = new RowNode();
+        this.context.wireBean(groupNode);
+
+        groupNode.group = true;
+        groupNode.field = groupInfo.field;
+        groupNode.rowGroupColumn = groupInfo.rowGroupColumn;
+        groupNode.groupData = {};
+
+        let groupDisplayCols: Column[] = this.columnController.getGroupDisplayColumns();
+
+        groupDisplayCols.forEach(col => {
+            // newGroup.rowGroupColumn=null when working off GroupInfo, and we always display the group in the group column
+            // if rowGroupColumn is present, then it's grid row grouping and we only include if configuration says so
+            let displayGroupForCol = this.usingTreeData || col.isRowGroupDisplayed(groupNode.rowGroupColumn.getId());
+            if (displayGroupForCol) {
+                groupNode.groupData[col.getColId()] = groupInfo.key;
+            }
+        });
+
+        // we use negative number for the ids of the groups, this makes sure we don't clash with the
+        // id's of the leaf nodes.
+        groupNode.id = (this.groupIdSequence.next()*-1).toString();
+        groupNode.key = groupInfo.key;
+
+        groupNode.level = level;
+        groupNode.leafGroup = this.usingTreeData ? false : level === (details.groupedColCount-1);
+
+        // if doing pivoting, then the leaf group is never expanded,
+        // as we do not show leaf rows
+        if (details.pivotMode && groupNode.leafGroup) {
+            groupNode.expanded = false;
+        } else {
+            groupNode.expanded = this.isExpanded(details.expandByDefault, level);
+        }
+
+        groupNode.allLeafChildren = [];
+        // why is this done here? we are not updating the children could as we go,
+        // i suspect this is updated in the filter stage
+
+        groupNode.setAllChildrenCount(0);
+
+        groupNode.rowGroupIndex = this.usingTreeData ? null : level;
+
+        groupNode.childrenAfterGroup = [];
+        groupNode.childrenMapped = {};
+
+        groupNode.parent = details.includeParents ? parent : null;
+
+        return groupNode;
+    }
+
+    private getChildrenMappedKey(key: string, rowGroupColumn: Column): string {
+        if (rowGroupColumn) {
+            // grouping by columns
+            return rowGroupColumn.getId() + '-' + key;
+        } else {
+            // tree data - we don't have rowGroupColumns
+            return key;
+        }
+    }
+
+    private isExpanded(expandByDefault: number, level: number) {
+        if (expandByDefault===-1) {
+            return true;
+        } else {
+            return level < expandByDefault;
+        }
+    }
+
+    private getGroupInfo(rowNode: RowNode, details: GroupingDetails): GroupInfo[] {
+        if (this.usingTreeData) {
+            return this.getGroupInfoFromCallback(rowNode);
+        } else {
+            return this.getGroupInfoFromGroupColumns(rowNode, details);
+        }
+    }
+
+    private getGroupInfoFromCallback(rowNode: RowNode) : GroupInfo[] {
+        let keys: string[] = this.getDataPath(rowNode.data);
+        let groupInfoMapper = (key: string) => <GroupInfo> {key: key, field: null, rowGroupColumn: null};
+        return keys ? keys.map(groupInfoMapper) : [];
+    }
+
+    private getGroupInfoFromGroupColumns(rowNode: RowNode, details: GroupingDetails) {
+        let res: GroupInfo[] = [];
+        details.groupedCols.forEach( groupCol => {
+            let key: any = this.getKeyForNode(groupCol, rowNode);
+            let keyExists = key!==null && key!==undefined;
+
+            // unbalanced tree and pivot mode don't work together - not because of the grid, it doesn't make
+            // mathematical sense as you are building up a cube. so if pivot mode, we put in a blank key where missing.
+            // this keeps the tree balanced and hence can be represented as a group.
+            if (details.pivotMode && !keyExists) {
+                key = ' ';
+                keyExists = true;
+            }
+
+            if (keyExists) {
+                let item = <GroupInfo> {
+                    key: key,
+                    field: groupCol.getColDef().field,
+                    rowGroupColumn: groupCol
+                };
+                res.push(item);
+            }
+        });
+        return res;
     }
 
     private getKeyForNode(groupColumn: Column, rowNode: RowNode): any {
@@ -215,61 +484,4 @@ export class GroupStage implements IRowNodeStage {
 
         return result;
     }
-
-    private createSubGroup(groupKey: string, groupColumn: Column, parent: RowNode, expandByDefault: any, level: number, includeParents: boolean, numberOfGroupColumns: number, isPivot: boolean): RowNode {
-        let newGroup = new RowNode();
-        this.context.wireBean(newGroup);
-
-        newGroup.group = true;
-        newGroup.field = groupColumn.getColDef().field;
-        newGroup.rowGroupColumn = groupColumn;
-        newGroup.groupData = {};
-
-        let groupDisplayCols: Column[] = this.columnController.getGroupDisplayColumns();
-
-        groupDisplayCols.forEach(col => {
-            if (col.isRowGroupDisplayed(newGroup.rowGroupColumn.getId())){
-                newGroup.groupData[col.getColId()] = groupKey;
-            }
-        });
-
-        // we use negative number for the ids of the groups, this makes sure we don't clash with the
-        // id's of the leaf nodes.
-        newGroup.id = (this.groupIdSequence.next()*-1).toString();
-        newGroup.key = groupKey;
-
-        newGroup.level = level;
-        newGroup.leafGroup = level === (numberOfGroupColumns-1);
-
-        // if doing pivoting, then the leaf group is never expanded,
-        // as we do not show leaf rows
-        if (isPivot && newGroup.leafGroup) {
-            newGroup.expanded = false;
-        } else {
-            newGroup.expanded = this.isExpanded(expandByDefault, level);
-        }
-
-        newGroup.allLeafChildren = [];
-        // why is this done here? we are not updating the children could as we go,
-        // i suspect this is updated in the filter stage
-
-        newGroup.setAllChildrenCount(0);
-        newGroup.rowGroupIndex = level;
-
-        newGroup.childrenAfterGroup = [];
-        newGroup.childrenMapped = {};
-
-        newGroup.parent = includeParents ? parent : null;
-
-        return newGroup;
-    }
-
-    private isExpanded(expandByDefault: number, level: number) {
-        if (expandByDefault===-1) {
-            return true;
-        } else {
-            return level < expandByDefault;
-        }
-    }
-
 }

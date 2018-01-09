@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -26,11 +26,13 @@ var rowGroupColumnsPanel_1 = require("./columnDrop/rowGroupColumnsPanel");
 var pivotColumnsPanel_1 = require("./columnDrop/pivotColumnsPanel");
 var pivotModePanel_1 = require("./columnDrop/pivotModePanel");
 var valueColumnsPanel_1 = require("./columnDrop/valueColumnsPanel");
+var ag_grid_1 = require("ag-grid");
 var ToolPanelComp = (function (_super) {
     __extends(ToolPanelComp, _super);
     function ToolPanelComp() {
         var _this = _super.call(this, ToolPanelComp_1.TEMPLATE) || this;
         _this.initialised = false;
+        _this.childDestroyFuncs = [];
         return _this;
     }
     ToolPanelComp_1 = ToolPanelComp;
@@ -59,10 +61,21 @@ var ToolPanelComp = (function (_super) {
     };
     ToolPanelComp.prototype.addComponent = function (component) {
         this.context.wireBean(component);
-        this.getHtmlElement().appendChild(component.getHtmlElement());
-        this.addDestroyFunc(function () {
-            component.destroy();
-        });
+        this.getGui().appendChild(component.getGui());
+        this.childDestroyFuncs.push(component.destroy.bind(component));
+    };
+    ToolPanelComp.prototype.destroyChildren = function () {
+        this.childDestroyFuncs.forEach(function (func) { return func(); });
+        this.childDestroyFuncs.length = 0;
+        ag_grid_1._.removeAllChildren(this.getGui());
+    };
+    ToolPanelComp.prototype.refresh = function () {
+        this.destroyChildren();
+        this.init();
+    };
+    ToolPanelComp.prototype.destroy = function () {
+        this.destroyChildren();
+        _super.prototype.destroy.call(this);
     };
     ToolPanelComp.TEMPLATE = '<div class="ag-tool-panel"></div>';
     __decorate([

@@ -1,4 +1,4 @@
-// ag-grid-enterprise v13.3.0
+// ag-grid-enterprise v14.0.1
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -39,7 +39,7 @@ var RichSelectCellEditor = (function (_super) {
         this.virtualList = new virtualList_1.VirtualList();
         this.context.wireBean(this.virtualList);
         this.virtualList.setComponentCreator(this.createRowComponent.bind(this));
-        this.getHtmlElement().querySelector('.ag-rich-select-list').appendChild(this.virtualList.getHtmlElement());
+        this.getGui().querySelector('.ag-rich-select-list').appendChild(this.virtualList.getGui());
         if (main_1.Utils.exists(this.params.cellHeight)) {
             this.virtualList.setRowHeight(this.params.cellHeight);
         }
@@ -54,8 +54,8 @@ var RichSelectCellEditor = (function (_super) {
             getRow: function (index) { return values[index]; }
         });
         this.addGuiEventListener('keydown', this.onKeyDown.bind(this));
-        this.addDestroyableEventListener(this.virtualList.getHtmlElement(), 'click', this.onClick.bind(this));
-        this.addDestroyableEventListener(this.virtualList.getHtmlElement(), 'mousemove', this.onMouseMove.bind(this));
+        this.addDestroyableEventListener(this.virtualList.getGui(), 'click', this.onClick.bind(this));
+        this.addDestroyableEventListener(this.virtualList.getGui(), 'mousemove', this.onMouseMove.bind(this));
     };
     RichSelectCellEditor.prototype.onKeyDown = function (event) {
         var key = event.which || event.keyCode;
@@ -84,13 +84,16 @@ var RichSelectCellEditor = (function (_super) {
         }
     };
     RichSelectCellEditor.prototype.renderSelectedValue = function () {
-        var eValue = this.getHtmlElement().querySelector('.ag-rich-select-value');
+        var _this = this;
+        var eValue = this.getGui().querySelector('.ag-rich-select-value');
         var valueFormatted = this.params.formatValue(this.selectedValue);
         if (this.cellRenderer) {
-            var result_1 = this.cellRendererService.useCellRenderer(this.params.column.getColDef(), eValue, { value: this.selectedValue, valueFormatted: valueFormatted });
-            if (result_1 && result_1.destroy) {
-                this.addDestroyFunc(function () { return result_1.destroy(); });
-            }
+            var rendererPromise = this.cellRendererService.useRichSelectCellRenderer(this.params.column.getColDef(), eValue, { value: this.selectedValue, valueFormatted: valueFormatted });
+            rendererPromise.then(function (renderer) {
+                if (renderer && renderer.destroy) {
+                    _this.addDestroyFunc(function () { return renderer.destroy(); });
+                }
+            });
         }
         else {
             if (main_1.Utils.exists(this.selectedValue)) {
@@ -120,13 +123,13 @@ var RichSelectCellEditor = (function (_super) {
         return row;
     };
     RichSelectCellEditor.prototype.onMouseMove = function (mouseEvent) {
-        var rect = this.virtualList.getHtmlElement().getBoundingClientRect();
+        var rect = this.virtualList.getGui().getBoundingClientRect();
         var scrollTop = this.virtualList.getScrollTop();
         var mouseY = mouseEvent.clientY - rect.top + scrollTop;
         var row = Math.floor(mouseY / this.virtualList.getRowHeight());
         var value = this.params.values[row];
         // not using utils.exist() as want empty string test to pass
-        if (value !== null && value !== undefined) {
+        if (value !== undefined) {
             this.setSelectedValue(value);
         }
     };
@@ -147,7 +150,7 @@ var RichSelectCellEditor = (function (_super) {
         // we call refresh again, as the list could of moved, and we need to render the new rows
         this.virtualList.refresh();
         if (this.focusAfterAttached) {
-            this.getHtmlElement().focus();
+            this.getGui().focus();
         }
     };
     RichSelectCellEditor.prototype.getValue = function () {
