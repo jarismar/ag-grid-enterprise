@@ -2,6 +2,7 @@ import {Bean, CellEditorFactory, Autowired, FilterManager, PostConstruct, PreCon
 import {SetFilter} from "./setFilter/setFilter";
 import {RichSelectCellEditor} from "./rendering/richSelect/richSelectCellEditor";
 import {LicenseManager} from "./licenseManager";
+import {DetailCellRenderer} from "./rendering/detail/detailCellRenderer";
 
 @Bean('enterpriseBoot')
 export class EnterpriseBoot {
@@ -13,12 +14,11 @@ export class EnterpriseBoot {
 
     @PreConstruct
     private init(): void {
-        this.componentProvider.registerComponent('richSelect', RichSelectCellEditor);
-        this.componentProvider.registerComponent('richSelectCellEditor', RichSelectCellEditor);
-        this.componentProvider.registerComponent('setColumnFilter', SetFilter);
+        this.componentProvider.registerComponent('agRichSelect', RichSelectCellEditor);
+        this.componentProvider.registerComponent('agRichSelectCellEditor', RichSelectCellEditor);
+        this.componentProvider.registerComponent('agSetColumnFilter', SetFilter);
+        this.componentProvider.registerComponent('agDetailCellRenderer', DetailCellRenderer);
 
         this.licenseManager.validateLicense();
     }
-
-
 }

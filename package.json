@@ -1,6 +1,6 @@
 {
   "name": "ag-grid-enterprise",
-  "version": "14.0.1",
+  "version": "15.0.0",
   "description": "ag-Grid Enterprise Features",
   "main": "main.js",
   "types": "main.d.ts",
@@ -37,10 +37,10 @@
     "style-loader": "0.13.0",
     "css-loader": "0.23.1",
     "gulp-rename": "1.2.2",
-    "ag-grid": "git+https://git@github.com/jarismar/ag-grid.git#v14.0.0"
+    "ag-grid": "git+https://git@github.com/jarismar/ag-grid.git#v15.0.0"
   },
   "peerDependencies": {
-    "ag-grid": "git+https://git@github.com/jarismar/ag-grid.git#v14.0.0"
+    "ag-grid": "git+https://git@github.com/jarismar/ag-grid.git#v15.0.0"
   },
   "dependencies": {}
 }
