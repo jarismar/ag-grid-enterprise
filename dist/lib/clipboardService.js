@@ -384,6 +384,11 @@ var ClipboardService = (function () {
         var tbody = table.createTBody();
         var borderStyle = 'solid 1px #a9a9a9';
         var fontStyle = 'Helvetica Neue, Helvetica, Arial, sans-serif';
+        var numericTypes = [
+            'currency',
+            'integer',
+            'double',
+        ];
         table.cellSpacing = '0';
         table.style.borderCollapse = 'collapse';
         if (dataObj.headings.length > 0) {
@@ -398,7 +403,8 @@ var ClipboardService = (function () {
                 td.style.fontFamily = fontStyle;
                 td.style.fontSize = '11px';
                 td.style.border = borderStyle;
-                if (dataObj.colDefs[index].getFilter() === 'number') {
+                var dataType = dataObj.colDefs[index].getDefinition().dataType;
+                if (numericTypes.indexOf(dataType) >= 0) {
                     td.style.textAlign = 'right';
                 }
                 else {
@@ -416,7 +422,8 @@ var ClipboardService = (function () {
                 td.style.fontFamily = fontStyle;
                 td.style.fontSize = '11px';
                 td.style.border = borderStyle;
-                if (dataObj.colDefs[cellIndex].getFilter() === 'number') {
+                var dataType = dataObj.colDefs[cellIndex].getDefinition().dataType;
+                if (numericTypes.indexOf(dataType) >= 0) {
                     td.style.textAlign = 'right';
                 }
                 else {

@@ -479,6 +479,12 @@ export class ClipboardService implements IClipboardService {
         const borderStyle = 'solid 1px #a9a9a9';
         const fontStyle = 'Helvetica Neue, Helvetica, Arial, sans-serif';
 
+        const numericTypes = [
+            'currency',
+            'integer',
+            'double',
+        ];
+
         table.cellSpacing = '0';
         table.style.borderCollapse = 'collapse';
 
@@ -495,7 +501,8 @@ export class ClipboardService implements IClipboardService {
                 td.style.fontSize = '11px';
                 td.style.border = borderStyle;
 
-                if (dataObj.colDefs[index].getFilter() === 'number') {
+                const dataType = dataObj.colDefs[index].getDefinition().dataType;
+                if (numericTypes.indexOf(dataType) >= 0) {
                     td.style.textAlign = 'right';
                 } else {
                     td.style.textAlign = 'center';
@@ -515,7 +522,8 @@ export class ClipboardService implements IClipboardService {
                 td.style.fontSize = '11px';
                 td.style.border = borderStyle;
 
-                if (dataObj.colDefs[cellIndex].getFilter() === 'number') {
+                const dataType = dataObj.colDefs[cellIndex].getDefinition().dataType;
+                if (numericTypes.indexOf(dataType) >= 0) {
                     td.style.textAlign = 'right';
                 } else {
                     td.style.textAlign = 'left';
