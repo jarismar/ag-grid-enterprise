@@ -1,9 +1,9 @@
-// ag-grid-enterprise v15.0.0
+// ag-grid-enterprise v17.0.0
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var columnSelectPanel_1 = require("./toolPanel/columnsSelect/columnSelectPanel");
-var renderedColumn_1 = require("./toolPanel/columnsSelect/renderedColumn");
-var renderedGroup_1 = require("./toolPanel/columnsSelect/renderedGroup");
+var columnSelectComp_1 = require("./toolPanel/columnsSelect/columnSelectComp");
+var toolPanelColumnComp_1 = require("./toolPanel/columnsSelect/toolPanelColumnComp");
+var toolPanelGroupComp_1 = require("./toolPanel/columnsSelect/toolPanelGroupComp");
 var aggregationStage_1 = require("./rowStages/aggregationStage");
 var groupStage_1 = require("./rowStages/groupStage");
 var setFilter_1 = require("./setFilter/setFilter");
@@ -24,7 +24,7 @@ var richSelectRow_1 = require("./rendering/richSelect/richSelectRow");
 var virtualList_1 = require("./rendering/virtualList");
 var abstractColumnDropPanel_1 = require("./toolPanel/columnDrop/abstractColumnDropPanel");
 var pivotColumnsPanel_1 = require("./toolPanel/columnDrop/pivotColumnsPanel");
-var toolPanelComp_1 = require("./toolPanel/toolPanelComp");
+var columnPanel_1 = require("./toolPanel/columnPanel");
 var licenseManager_1 = require("./licenseManager");
 var pivotStage_1 = require("./rowStages/pivotStage");
 var pivotColDefService_1 = require("./rowStages/pivotColDefService");
@@ -62,10 +62,10 @@ function populateClientExports(exports) {
     exports.PivotModePanel = pivotModePanel_1.PivotModePanel;
     exports.RowGroupColumnsPanel = rowGroupColumnsPanel_1.RowGroupColumnsPanel;
     exports.ValuesColumnPanel = valueColumnsPanel_1.ValuesColumnPanel;
-    exports.ToolPanelComp = toolPanelComp_1.ToolPanelComp;
-    exports.ColumnSelectPanel = columnSelectPanel_1.ColumnSelectPanel;
-    exports.RenderedColumn = renderedColumn_1.RenderedColumn;
-    exports.RenderedGroup = renderedGroup_1.RenderedGroup;
+    exports.ToolPanelComp = columnPanel_1.ColumnPanel;
+    exports.ColumnSelectPanel = columnSelectComp_1.ColumnSelectComp;
+    exports.RenderedColumn = toolPanelColumnComp_1.ToolPanelColumnComp;
+    exports.RenderedGroup = toolPanelGroupComp_1.ToolPanelGroupComp;
     exports.ViewportRowModel = viewportRowModel_1.ViewportRowModel;
     exports.ClipboardService = clipboardService_1.ClipboardService;
     exports.ContextMenuFactory = contextMenu_1.ContextMenuFactory;

@@ -1,4 +1,4 @@
-// ag-grid-enterprise v15.0.0
+// ag-grid-enterprise v17.0.0
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -58,9 +58,14 @@ var AbstractColumnDropPanel = (function (_super) {
             onDragging: this.onDragging.bind(this),
             onDragEnter: this.onDragEnter.bind(this),
             onDragLeave: this.onDragLeave.bind(this),
-            onDragStop: this.onDragStop.bind(this)
+            onDragStop: this.onDragStop.bind(this),
+            isInterestedIn: this.isInterestedIn.bind(this)
         };
         this.beans.dragAndDropService.addDropTarget(this.dropTarget);
+    };
+    AbstractColumnDropPanel.prototype.isInterestedIn = function (type) {
+        // not interested in row drags
+        return type === main_1.DragSourceType.HeaderCell || type === main_1.DragSourceType.ToolPanel;
     };
     AbstractColumnDropPanel.prototype.checkInsertIndex = function (draggingEvent) {
         var newIndex;
@@ -262,12 +267,15 @@ var AbstractColumnDropPanel = (function (_super) {
                 itemsToAddToGui.push(columnComponent);
             });
         }
+        var eContainer = document.createElement('div');
+        main_1._.addCssClass(eContainer, 'ag-column-drop-list');
+        this.getGui().appendChild(eContainer);
         itemsToAddToGui.forEach(function (columnComponent, index) {
             var needSeparator = index !== 0;
             if (needSeparator) {
-                _this.addArrowToGui();
+                _this.addArrow(eContainer);
             }
-            _this.getGui().appendChild(columnComponent.getGui());
+            eContainer.appendChild(columnComponent.getGui());
         });
     };
     AbstractColumnDropPanel.prototype.createColumnComponent = function (column, ghost) {
@@ -283,16 +291,18 @@ var AbstractColumnDropPanel = (function (_super) {
     AbstractColumnDropPanel.prototype.addIconAndTitleToGui = function () {
         var iconFaded = this.horizontal && this.isExistingColumnsEmpty();
         var eGroupIcon = this.params.icon;
+        var eContainer = document.createElement('div');
         main_1.Utils.addCssClass(eGroupIcon, 'ag-column-drop-icon');
         main_1.Utils.addOrRemoveCssClass(eGroupIcon, 'ag-faded', iconFaded);
-        this.getGui().appendChild(eGroupIcon);
+        eContainer.appendChild(eGroupIcon);
         if (!this.horizontal) {
             var eTitle = document.createElement('span');
             eTitle.innerHTML = this.params.title;
             main_1.Utils.addCssClass(eTitle, 'ag-column-drop-title');
             main_1.Utils.addOrRemoveCssClass(eTitle, 'ag-faded', iconFaded);
-            this.getGui().appendChild(eTitle);
+            eContainer.appendChild(eTitle);
         }
+        this.getGui().appendChild(eContainer);
     };
     AbstractColumnDropPanel.prototype.isExistingColumnsEmpty = function () {
         return this.getExistingColumns().length === 0;
@@ -307,7 +317,7 @@ var AbstractColumnDropPanel = (function (_super) {
         main_1.Utils.addCssClass(eMessage, 'ag-column-drop-empty-message');
         this.getGui().appendChild(eMessage);
     };
-    AbstractColumnDropPanel.prototype.addArrowToGui = function () {
+    AbstractColumnDropPanel.prototype.addArrow = function (eParent) {
         // only add the arrows if the layout is horizontal
         if (this.horizontal) {
             // for RTL it's a left arrow, otherwise it's a right arrow
@@ -318,7 +328,7 @@ var AbstractColumnDropPanel = (function (_super) {
             var eArrow = document.createElement('span');
             eArrow.className = spanClass;
             eArrow.innerHTML = charCode;
-            this.getGui().appendChild(eArrow);
+            eParent.appendChild(eArrow);
         }
     };
     AbstractColumnDropPanel.STATE_NOT_DRAGGING = 'notDragging';

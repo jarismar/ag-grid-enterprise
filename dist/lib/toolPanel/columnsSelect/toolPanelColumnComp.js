@@ -1,4 +1,4 @@
-// ag-grid-enterprise v15.0.0
+// ag-grid-enterprise v17.0.0
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -21,24 +21,28 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var main_1 = require("ag-grid/main");
-var RenderedColumn = (function (_super) {
-    __extends(RenderedColumn, _super);
-    function RenderedColumn(column, columnDept, allowDragging) {
+var ToolPanelColumnComp = (function (_super) {
+    __extends(ToolPanelColumnComp, _super);
+    function ToolPanelColumnComp(column, columnDept, allowDragging, groupsExist) {
         var _this = _super.call(this) || this;
         _this.processingColumnStateChange = false;
         _this.column = column;
         _this.columnDept = columnDept;
         _this.allowDragging = allowDragging;
+        _this.groupsExist = groupsExist;
         return _this;
     }
-    RenderedColumn.prototype.init = function () {
-        this.setTemplate(RenderedColumn.TEMPLATE);
+    ToolPanelColumnComp.prototype.init = function () {
+        this.setTemplate(ToolPanelColumnComp.TEMPLATE);
         this.displayName = this.columnController.getDisplayNameForColumn(this.column, 'toolPanel');
         this.eText.innerHTML = this.displayName;
-        this.addCssClass('ag-toolpanel-indent-' + this.columnDept);
-        if (this.allowDragging) {
-            this.addDragSource();
+        // if grouping, we add an extra level of indent, to cater for expand/contract icons we need to indent for
+        var indent = this.columnDept;
+        if (this.groupsExist) {
+            this.addCssClass('ag-toolpanel-add-group-indent');
         }
+        this.addCssClass("ag-toolpanel-indent-" + indent);
+        this.setupDragging();
         this.addDestroyableEventListener(this.eventService, main_1.Events.EVENT_COLUMN_PIVOT_MODE_CHANGED, this.onColumnStateChanged.bind(this));
         this.addDestroyableEventListener(this.column, main_1.Column.EVENT_VALUE_CHANGED, this.onColumnStateChanged.bind(this));
         this.addDestroyableEventListener(this.column, main_1.Column.EVENT_PIVOT_CHANGED, this.onColumnStateChanged.bind(this));
@@ -48,22 +52,9 @@ var RenderedColumn = (function (_super) {
         this.instantiate(this.context);
         this.onColumnStateChanged();
         this.addDestroyableEventListener(this.cbSelect, main_1.AgCheckbox.EVENT_CHANGED, this.onChange.bind(this));
-        this.addDestroyableEventListener(this.eText, 'click', this.onClick.bind(this));
-        this.addTap();
         main_1.CssClassApplier.addToolPanelClassesFromColDef(this.column.getColDef(), this.getGui(), this.gridOptionsWrapper, this.column, null);
     };
-    RenderedColumn.prototype.addTap = function () {
-        var touchListener = new main_1.TouchListener(this.getGui());
-        this.addDestroyableEventListener(touchListener, main_1.TouchListener.EVENT_TAP, this.onClick.bind(this));
-        this.addDestroyFunc(touchListener.destroy.bind(touchListener));
-    };
-    RenderedColumn.prototype.onClick = function () {
-        if (this.cbSelect.isReadOnly()) {
-            return;
-        }
-        this.cbSelect.toggle();
-    };
-    RenderedColumn.prototype.onChange = function (event) {
+    ToolPanelColumnComp.prototype.onChange = function (event) {
         // only want to action if the user clicked the checkbox, not is we are setting the checkbox because
         // of a change in the model
         if (this.processingColumnStateChange) {
@@ -81,10 +72,13 @@ var RenderedColumn = (function (_super) {
             }
         }
         else {
-            this.columnController.setColumnVisible(this.column, event.selected);
+            this.columnController.setColumnVisible(this.column, event.selected, "columnMenu");
+        }
+        if (this.selectionCallback) {
+            this.selectionCallback(this.isSelected());
         }
     };
-    RenderedColumn.prototype.actionUnCheckedPivotMode = function () {
+    ToolPanelColumnComp.prototype.actionUnCheckedPivotMode = function () {
         var functionPassive = this.gridOptionsWrapper.isFunctionsPassive();
         var column = this.column;
         var columnController = this.columnController;
@@ -102,7 +96,7 @@ var RenderedColumn = (function (_super) {
                 this.eventService.dispatchEvent(event_1);
             }
             else {
-                columnController.removePivotColumn(column);
+                columnController.removePivotColumn(column, "columnMenu");
             }
         }
         // remove value if column is value
@@ -119,7 +113,7 @@ var RenderedColumn = (function (_super) {
                 this.eventService.dispatchEvent(event_2);
             }
             else {
-                columnController.removeValueColumn(column);
+                columnController.removeValueColumn(column, "columnMenu");
             }
         }
         // remove group if column is grouped
@@ -136,11 +130,11 @@ var RenderedColumn = (function (_super) {
                 this.eventService.dispatchEvent(event_3);
             }
             else {
-                columnController.removeRowGroupColumn(column);
+                columnController.removeRowGroupColumn(column, "columnMenu");
             }
         }
     };
-    RenderedColumn.prototype.actionCheckedPivotMode = function () {
+    ToolPanelColumnComp.prototype.actionCheckedPivotMode = function () {
         var column = this.column;
         // function already active, so do nothing
         if (column.isValueActive() || column.isPivotActive() || column.isRowGroupActive()) {
@@ -160,7 +154,7 @@ var RenderedColumn = (function (_super) {
                 this.eventService.dispatchEvent(event_4);
             }
             else {
-                this.columnController.addValueColumn(column);
+                this.columnController.addValueColumn(column, "columnMenu");
             }
         }
         else if (column.isAllowRowGroup()) {
@@ -176,7 +170,7 @@ var RenderedColumn = (function (_super) {
                 this.eventService.dispatchEvent(event_5);
             }
             else {
-                this.columnController.addRowGroupColumn(column);
+                this.columnController.addRowGroupColumn(column, "columnMenu");
             }
         }
         else if (column.isAllowPivot()) {
@@ -192,22 +186,26 @@ var RenderedColumn = (function (_super) {
                 this.eventService.dispatchEvent(event_6);
             }
             else {
-                this.columnController.addPivotColumn(column);
+                this.columnController.addPivotColumn(column, "columnMenu");
             }
         }
     };
-    RenderedColumn.prototype.addDragSource = function () {
+    ToolPanelColumnComp.prototype.setupDragging = function () {
         var _this = this;
+        if (!this.allowDragging) {
+            main_1._.setVisible(this.eDragHandle, false);
+            return;
+        }
         var dragSource = {
             type: main_1.DragSourceType.ToolPanel,
-            eElement: this.getGui(),
+            eElement: this.eDragHandle,
             dragItemName: this.displayName,
             dragItemCallback: function () { return _this.createDragItem(); }
         };
         this.dragAndDropService.addDragSource(dragSource, true);
         this.addDestroyFunc(function () { return _this.dragAndDropService.removeDragSource(dragSource); });
     };
-    RenderedColumn.prototype.createDragItem = function () {
+    ToolPanelColumnComp.prototype.createDragItem = function () {
         var visibleState = {};
         visibleState[this.column.getId()] = this.column.isVisible();
         return {
@@ -215,81 +213,119 @@ var RenderedColumn = (function (_super) {
             visibleState: visibleState
         };
     };
-    RenderedColumn.prototype.onColumnStateChanged = function () {
+    ToolPanelColumnComp.prototype.onColumnStateChanged = function () {
         this.processingColumnStateChange = true;
         var isPivotMode = this.columnController.isPivotMode();
         if (isPivotMode) {
             // if reducing, checkbox means column is one of pivot, value or group
             var anyFunctionActive = this.column.isAnyFunctionActive();
             this.cbSelect.setSelected(anyFunctionActive);
+            if (this.selectionCallback) {
+                this.selectionCallback(this.isSelected());
+            }
         }
         else {
             // if not reducing, the checkbox tells us if column is visible or not
             this.cbSelect.setSelected(this.column.isVisible());
+            if (this.selectionCallback) {
+                this.selectionCallback(this.isSelected());
+            }
         }
-        // read only in pivot mode if:
-        var checkboxReadOnly = isPivotMode
-            && (this.gridOptionsWrapper.isFunctionsReadOnly()
-                || !this.column.isAnyFunctionAllowed());
+        var checkboxReadOnly;
+        if (isPivotMode) {
+            // when in pivot mode, the item should be read only if:
+            //  a) gui is not allowed make any changes
+            var functionsReadOnly = this.gridOptionsWrapper.isFunctionsReadOnly();
+            //  b) column is not allow any functions on it
+            var noFunctionsAllowed = !this.column.isAnyFunctionAllowed();
+            checkboxReadOnly = functionsReadOnly || noFunctionsAllowed;
+        }
+        else {
+            // when in normal mode, the checkbox is read only if visibility is locked
+            checkboxReadOnly = this.column.isLockVisible();
+        }
         this.cbSelect.setReadOnly(checkboxReadOnly);
         var checkboxPassive = isPivotMode && this.gridOptionsWrapper.isFunctionsPassive();
         this.cbSelect.setPassive(checkboxPassive);
         this.processingColumnStateChange = false;
     };
-    RenderedColumn.TEMPLATE = '<div class="ag-column-select-column">' +
-        '<ag-checkbox class="ag-column-select-checkbox"></ag-checkbox>' +
-        '<span class="ag-column-select-label"></span>' +
-        '</div>';
+    ToolPanelColumnComp.prototype.getDisplayName = function () {
+        return this.displayName;
+    };
+    ToolPanelColumnComp.prototype.onSelectAllChanged = function (value) {
+        if (value !== this.cbSelect.isSelected()) {
+            if (!this.cbSelect.isReadOnly()) {
+                this.cbSelect.toggle();
+            }
+        }
+    };
+    ToolPanelColumnComp.prototype.isSelected = function () {
+        return this.cbSelect.isSelected();
+    };
+    ToolPanelColumnComp.prototype.isSelectable = function () {
+        return !this.cbSelect.isReadOnly();
+    };
+    ToolPanelColumnComp.prototype.isExpandable = function () {
+        return false;
+    };
+    ToolPanelColumnComp.prototype.setExpanded = function (value) {
+        console.warn('ag-grid: can not expand a column item that does not represent a column group header');
+    };
+    ToolPanelColumnComp.TEMPLATE = "<div class=\"ag-column-select-column\">\n            <ag-checkbox class=\"ag-column-select-checkbox\"></ag-checkbox>\n            <span class=\"ag-column-drag\" ref=\"eDragHandle\"></span>\n            <span class=\"ag-column-select-label\"></span>\n        </div>";
     __decorate([
         main_1.Autowired('gridOptionsWrapper'),
         __metadata("design:type", main_1.GridOptionsWrapper)
-    ], RenderedColumn.prototype, "gridOptionsWrapper", void 0);
+    ], ToolPanelColumnComp.prototype, "gridOptionsWrapper", void 0);
     __decorate([
         main_1.Autowired('columnController'),
         __metadata("design:type", main_1.ColumnController)
-    ], RenderedColumn.prototype, "columnController", void 0);
+    ], ToolPanelColumnComp.prototype, "columnController", void 0);
     __decorate([
         main_1.Autowired('eventService'),
         __metadata("design:type", main_1.EventService)
-    ], RenderedColumn.prototype, "eventService", void 0);
+    ], ToolPanelColumnComp.prototype, "eventService", void 0);
     __decorate([
         main_1.Autowired('dragAndDropService'),
         __metadata("design:type", main_1.DragAndDropService)
-    ], RenderedColumn.prototype, "dragAndDropService", void 0);
+    ], ToolPanelColumnComp.prototype, "dragAndDropService", void 0);
     __decorate([
         main_1.Autowired('gridPanel'),
         __metadata("design:type", main_1.GridPanel)
-    ], RenderedColumn.prototype, "gridPanel", void 0);
+    ], ToolPanelColumnComp.prototype, "gridPanel", void 0);
     __decorate([
         main_1.Autowired('context'),
         __metadata("design:type", main_1.Context)
-    ], RenderedColumn.prototype, "context", void 0);
+    ], ToolPanelColumnComp.prototype, "context", void 0);
     __decorate([
         main_1.Autowired('columnApi'),
         __metadata("design:type", main_1.ColumnApi)
-    ], RenderedColumn.prototype, "columnApi", void 0);
+    ], ToolPanelColumnComp.prototype, "columnApi", void 0);
     __decorate([
         main_1.Autowired('gridApi'),
         __metadata("design:type", main_1.GridApi)
-    ], RenderedColumn.prototype, "gridApi", void 0);
+    ], ToolPanelColumnComp.prototype, "gridApi", void 0);
     __decorate([
         main_1.QuerySelector('.ag-column-select-label'),
         __metadata("design:type", HTMLElement)
-    ], RenderedColumn.prototype, "eText", void 0);
+    ], ToolPanelColumnComp.prototype, "eText", void 0);
     __decorate([
         main_1.QuerySelector('.ag-column-select-indent'),
         __metadata("design:type", HTMLElement)
-    ], RenderedColumn.prototype, "eIndent", void 0);
+    ], ToolPanelColumnComp.prototype, "eIndent", void 0);
     __decorate([
         main_1.QuerySelector('.ag-column-select-checkbox'),
         __metadata("design:type", main_1.AgCheckbox)
-    ], RenderedColumn.prototype, "cbSelect", void 0);
+    ], ToolPanelColumnComp.prototype, "cbSelect", void 0);
+    __decorate([
+        main_1.RefSelector('eDragHandle'),
+        __metadata("design:type", HTMLElement)
+    ], ToolPanelColumnComp.prototype, "eDragHandle", void 0);
     __decorate([
         main_1.PostConstruct,
         __metadata("design:type", Function),
         __metadata("design:paramtypes", []),
         __metadata("design:returntype", void 0)
-    ], RenderedColumn.prototype, "init", null);
-    return RenderedColumn;
+    ], ToolPanelColumnComp.prototype, "init", null);
+    return ToolPanelColumnComp;
 }(main_1.Component));
-exports.RenderedColumn = RenderedColumn;
+exports.ToolPanelColumnComp = ToolPanelColumnComp;

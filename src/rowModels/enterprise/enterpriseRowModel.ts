@@ -27,7 +27,8 @@ import {
     RowBounds,
     GridApi,
     ColumnApi,
-    RowDataChangedEvent
+    RowDataChangedEvent,
+    PreDestroy
 } from "ag-grid";
 import {EnterpriseCache, EnterpriseCacheParams} from "./enterpriseCache";
 
@@ -65,6 +66,19 @@ export class EnterpriseRowModel extends BeanStub implements IEnterpriseRowModel 
         }
     }
 
+    @PreDestroy
+    public destroy(): void {
+        super.destroy();
+    }
+
+    @PreDestroy
+    private destroyDatasource(): void {
+        if (this.datasource && this.datasource.destroy) {
+            this.datasource.destroy();
+        }
+        this.datasource = null;
+    }
+
     private setBeans(@Qualifier('loggerFactory') loggerFactory: LoggerFactory) {
         this.logger = loggerFactory.create('EnterpriseRowModel');
     }
@@ -81,11 +95,16 @@ export class EnterpriseRowModel extends BeanStub implements IEnterpriseRowModel 
         this.addDestroyableEventListener(this.eventService, Events.EVENT_COLUMN_ROW_GROUP_CHANGED, this.onColumnRowGroupChanged.bind(this));
         this.addDestroyableEventListener(this.eventService, Events.EVENT_ROW_GROUP_OPENED, this.onRowGroupOpened.bind(this));
         this.addDestroyableEventListener(this.eventService, Events.EVENT_COLUMN_PIVOT_MODE_CHANGED, this.onPivotModeChanged.bind(this));
+        this.addDestroyableEventListener(this.eventService, Events.EVENT_COLUMN_EVERYTHING_CHANGED, this.onColumnEverything.bind(this));
 
         this.addDestroyableEventListener(this.eventService, Events.EVENT_COLUMN_VALUE_CHANGED, this.onValueChanged.bind(this));
         this.addDestroyableEventListener(this.eventService, Events.EVENT_COLUMN_PIVOT_CHANGED, this.onColumnPivotChanged.bind(this));
         this.addDestroyableEventListener(this.eventService, Events.EVENT_FILTER_CHANGED, this.onFilterChanged.bind(this));
         this.addDestroyableEventListener(this.eventService, Events.EVENT_SORT_CHANGED, this.onSortChanged.bind(this));
+    }
+
+    private onColumnEverything(): void {
+        this.reset();
     }
 
     private onFilterChanged(): void {
@@ -113,15 +132,15 @@ export class EnterpriseRowModel extends BeanStub implements IEnterpriseRowModel 
     }
 
     private onRowGroupOpened(event: any): void {
-        let openedNode = <RowNode> event.node;
-        if (openedNode.expanded) {
-            if (_.missing(openedNode.childrenCache)) {
-                this.createNodeCache(openedNode);
+        let rowNode = <RowNode> event.node;
+        if (rowNode.expanded) {
+            if (_.missing(rowNode.childrenCache)) {
+                this.createNodeCache(rowNode);
             }
         } else {
-            if (this.gridOptionsWrapper.isPurgeClosedRowNodes() && _.exists(openedNode.childrenCache)) {
-                openedNode.childrenCache.destroy();
-                openedNode.childrenCache = null;
+            if (this.gridOptionsWrapper.isPurgeClosedRowNodes() && _.exists(rowNode.childrenCache)) {
+                rowNode.childrenCache.destroy();
+                rowNode.childrenCache = null;
             }
         }
         this.updateRowIndexesAndBounds();
@@ -192,6 +211,7 @@ export class EnterpriseRowModel extends BeanStub implements IEnterpriseRowModel 
     }
 
     public setDatasource(datasource: IEnterpriseDatasource): void {
+        this.destroyDatasource();
         this.datasource = datasource;
         this.reset();
     }
@@ -425,4 +445,5 @@ export class EnterpriseRowModel extends BeanStub implements IEnterpriseRowModel 
     public isRowPresent(rowNode: RowNode): boolean {
         return false;
     }
+
 }

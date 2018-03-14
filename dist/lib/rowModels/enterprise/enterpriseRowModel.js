@@ -1,4 +1,4 @@
-// ag-grid-enterprise v15.0.0
+// ag-grid-enterprise v17.0.0
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -38,6 +38,15 @@ var EnterpriseRowModel = (function (_super) {
             this.setDatasource(datasource);
         }
     };
+    EnterpriseRowModel.prototype.destroy = function () {
+        _super.prototype.destroy.call(this);
+    };
+    EnterpriseRowModel.prototype.destroyDatasource = function () {
+        if (this.datasource && this.datasource.destroy) {
+            this.datasource.destroy();
+        }
+        this.datasource = null;
+    };
     EnterpriseRowModel.prototype.setBeans = function (loggerFactory) {
         this.logger = loggerFactory.create('EnterpriseRowModel');
     };
@@ -53,10 +62,14 @@ var EnterpriseRowModel = (function (_super) {
         this.addDestroyableEventListener(this.eventService, ag_grid_1.Events.EVENT_COLUMN_ROW_GROUP_CHANGED, this.onColumnRowGroupChanged.bind(this));
         this.addDestroyableEventListener(this.eventService, ag_grid_1.Events.EVENT_ROW_GROUP_OPENED, this.onRowGroupOpened.bind(this));
         this.addDestroyableEventListener(this.eventService, ag_grid_1.Events.EVENT_COLUMN_PIVOT_MODE_CHANGED, this.onPivotModeChanged.bind(this));
+        this.addDestroyableEventListener(this.eventService, ag_grid_1.Events.EVENT_COLUMN_EVERYTHING_CHANGED, this.onColumnEverything.bind(this));
         this.addDestroyableEventListener(this.eventService, ag_grid_1.Events.EVENT_COLUMN_VALUE_CHANGED, this.onValueChanged.bind(this));
         this.addDestroyableEventListener(this.eventService, ag_grid_1.Events.EVENT_COLUMN_PIVOT_CHANGED, this.onColumnPivotChanged.bind(this));
         this.addDestroyableEventListener(this.eventService, ag_grid_1.Events.EVENT_FILTER_CHANGED, this.onFilterChanged.bind(this));
         this.addDestroyableEventListener(this.eventService, ag_grid_1.Events.EVENT_SORT_CHANGED, this.onSortChanged.bind(this));
+    };
+    EnterpriseRowModel.prototype.onColumnEverything = function () {
+        this.reset();
     };
     EnterpriseRowModel.prototype.onFilterChanged = function () {
         this.reset();
@@ -77,16 +90,16 @@ var EnterpriseRowModel = (function (_super) {
         this.reset();
     };
     EnterpriseRowModel.prototype.onRowGroupOpened = function (event) {
-        var openedNode = event.node;
-        if (openedNode.expanded) {
-            if (ag_grid_1._.missing(openedNode.childrenCache)) {
-                this.createNodeCache(openedNode);
+        var rowNode = event.node;
+        if (rowNode.expanded) {
+            if (ag_grid_1._.missing(rowNode.childrenCache)) {
+                this.createNodeCache(rowNode);
             }
         }
         else {
-            if (this.gridOptionsWrapper.isPurgeClosedRowNodes() && ag_grid_1._.exists(openedNode.childrenCache)) {
-                openedNode.childrenCache.destroy();
-                openedNode.childrenCache = null;
+            if (this.gridOptionsWrapper.isPurgeClosedRowNodes() && ag_grid_1._.exists(rowNode.childrenCache)) {
+                rowNode.childrenCache.destroy();
+                rowNode.childrenCache = null;
             }
         }
         this.updateRowIndexesAndBounds();
@@ -146,6 +159,7 @@ var EnterpriseRowModel = (function (_super) {
         }
     };
     EnterpriseRowModel.prototype.setDatasource = function (datasource) {
+        this.destroyDatasource();
         this.datasource = datasource;
         this.reset();
     };
@@ -383,6 +397,18 @@ var EnterpriseRowModel = (function (_super) {
         __metadata("design:paramtypes", []),
         __metadata("design:returntype", void 0)
     ], EnterpriseRowModel.prototype, "postConstruct", null);
+    __decorate([
+        ag_grid_1.PreDestroy,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", []),
+        __metadata("design:returntype", void 0)
+    ], EnterpriseRowModel.prototype, "destroy", null);
+    __decorate([
+        ag_grid_1.PreDestroy,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", []),
+        __metadata("design:returntype", void 0)
+    ], EnterpriseRowModel.prototype, "destroyDatasource", null);
     __decorate([
         __param(0, ag_grid_1.Qualifier('loggerFactory')),
         __metadata("design:type", Function),

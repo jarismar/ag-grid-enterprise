@@ -17,22 +17,24 @@ import {
     PostConstruct,
     QuerySelector,
     TouchListener,
-    Utils
+    Utils,
+    RefSelector,
+    _
 } from "ag-grid/main";
+import {BaseColumnItem} from "./columnSelectComp";
 
-export class RenderedGroup extends Component {
+export class ToolPanelGroupComp extends Component implements BaseColumnItem{
 
     private static TEMPLATE =
-        '<div class="ag-column-select-column-group">' +
-        '  <span id="eColumnGroupIcons" class="ag-column-group-icons">' +
-        '    <span id="eGroupOpenedIcon" class="ag-column-group-closed-icon"></span>' +
-        '    <span id="eGroupClosedIcon" class="ag-column-group-opened-icon"></span>' +
-        '  </span>' +
-        '  <span id="eCheckboxAndText">' +
-        '    <ag-checkbox class="ag-column-select-checkbox"></ag-checkbox>' +
-        '    <span id="eText" class="ag-column-select-column-group-label"></span>' +
-        '  </span>' +
-        '</div>';
+        `<div class="ag-column-select-column-group">
+            <span id="eColumnGroupIcons" class="ag-column-group-icons">
+                <span id="eGroupOpenedIcon" class="ag-column-group-closed-icon"></span>
+                <span id="eGroupClosedIcon" class="ag-column-group-opened-icon"></span>
+            </span>
+            <ag-checkbox class="ag-column-select-checkbox"></ag-checkbox>
+            <span class="ag-column-drag" ref="eDragHandle"></span>
+            <span id="eText" class="ag-column-select-column-group-label"></span>
+        </div>`;
 
     @Autowired('gridOptionsWrapper') private gridOptionsWrapper: GridOptionsWrapper;
     @Autowired('columnController') private columnController: ColumnController;
@@ -43,8 +45,10 @@ export class RenderedGroup extends Component {
 
     @QuerySelector('.ag-column-select-checkbox') private cbSelect: AgCheckbox;
 
+    @RefSelector('eDragHandle') private eDragHandle: HTMLElement;
+
     private columnGroup: OriginalColumnGroup;
-    private expanded = true;
+    private expanded: boolean;
     private columnDept: number;
 
     private eGroupClosedIcon: HTMLElement;
@@ -57,18 +61,20 @@ export class RenderedGroup extends Component {
     private displayName: string;
 
     private processingColumnStateChange = false;
+    private selectionCallback: (selected:boolean)=>void;
 
-    constructor(columnGroup: OriginalColumnGroup, columnDept: number, expandedCallback: ()=>void, allowDragging: boolean) {
+    constructor(columnGroup: OriginalColumnGroup, columnDept: number, expandedCallback: ()=>void, allowDragging: boolean, expandByDefault: boolean) {
         super();
         this.columnGroup = columnGroup;
         this.columnDept = columnDept;
         this.expandedCallback = expandedCallback;
         this.allowDragging = allowDragging;
+        this.expanded = expandByDefault;
     }
 
     @PostConstruct
     public init(): void {
-        this.setTemplate(RenderedGroup.TEMPLATE);
+        this.setTemplate(ToolPanelGroupComp.TEMPLATE);
 
         this.instantiate(this.context);
 
@@ -84,20 +90,12 @@ export class RenderedGroup extends Component {
 
         this.addCssClass('ag-toolpanel-indent-' + this.columnDept);
 
-        this.addDestroyableEventListener(eText, 'click', this.onClick.bind(this) );
         this.addDestroyableEventListener(this.eventService, Events.EVENT_COLUMN_PIVOT_MODE_CHANGED, this.onColumnStateChanged.bind(this) );
         this.addDestroyableEventListener(this.cbSelect, AgCheckbox.EVENT_CHANGED, this.onCheckboxChanged.bind(this));
 
-        let eCheckboxAndText = this.queryForHtmlElement('#eCheckboxAndText');
-        let touchListener = new TouchListener(eCheckboxAndText);
-        this.addDestroyableEventListener(touchListener, TouchListener.EVENT_TAP, this.onClick.bind(this) );
-        this.addDestroyFunc( touchListener.destroy.bind(touchListener) );
-
         this.setOpenClosedIcons();
 
-        if (this.allowDragging) {
-            this.addDragSource();
-        }
+        this.setupDragging();
 
         this.onColumnStateChanged();
         this.addVisibilityListenersToAllChildren();
@@ -114,10 +112,16 @@ export class RenderedGroup extends Component {
         });
     }
 
-    private addDragSource(): void {
+    private setupDragging(): void {
+
+        if (!this.allowDragging) {
+            _.setVisible(this.eDragHandle, false);
+            return;
+        }
+
         let dragSource: DragSource = {
             type: DragSourceType.ToolPanel,
-            eElement: this.getGui(),
+            eElement: this.eDragHandle,
             dragItemName: this.displayName,
             dragItemCallback: () => this.createDragItem()
         };
@@ -148,13 +152,9 @@ export class RenderedGroup extends Component {
         this.addDestroyableEventListener(this.eGroupOpenedIcon, 'click', this.onExpandOrContractClicked.bind(this));
 
         let eColumnGroupIcons = this.queryForHtmlElement('#eColumnGroupIcons');
-        let touchListener = new TouchListener(eColumnGroupIcons);
+        let touchListener = new TouchListener(eColumnGroupIcons, true);
         this.addDestroyableEventListener(touchListener, TouchListener.EVENT_TAP, this.onExpandOrContractClicked.bind(this));
         this.addDestroyFunc( touchListener.destroy.bind(touchListener) );
-    }
-
-    private onClick(): void {
-        this.cbSelect.setSelected(!this.cbSelect.isSelected());
     }
 
     private onCheckboxChanged(): void {
@@ -170,7 +170,12 @@ export class RenderedGroup extends Component {
                 this.actionUnCheckedReduce(childColumns)
             }
         } else {
-            this.columnController.setColumnsVisible(childColumns, selected);
+            let allowedColumns = childColumns.filter( c => !c.isLockVisible() );
+            this.columnController.setColumnsVisible(allowedColumns, selected, "toolPanelUi");
+        }
+
+        if (this.selectionCallback){
+            this.selectionCallback(this.isSelected());
         }
     }
 
@@ -193,13 +198,13 @@ export class RenderedGroup extends Component {
         });
 
         if (columnsToUnPivot.length>0) {
-            this.columnController.removePivotColumns(columnsToUnPivot);
+            this.columnController.removePivotColumns(columnsToUnPivot, "toolPanelUi");
         }
         if (columnsToUnGroup.length>0) {
-            this.columnController.removeRowGroupColumns(columnsToUnGroup);
+            this.columnController.removeRowGroupColumns(columnsToUnGroup, "toolPanelUi");
         }
         if (columnsToUnValue.length>0) {
-            this.columnController.removeValueColumns(columnsToUnValue);
+            this.columnController.removeValueColumns(columnsToUnValue, "toolPanelUi");
         }
     }
 
@@ -224,25 +229,57 @@ export class RenderedGroup extends Component {
         });
 
         if (columnsToAggregate.length>0) {
-            this.columnController.addValueColumns(columnsToAggregate);
+            this.columnController.addValueColumns(columnsToAggregate, "toolPanelUi");
         }
         if (columnsToGroup.length>0) {
-            this.columnController.addRowGroupColumns(columnsToGroup);
+            this.columnController.addRowGroupColumns(columnsToGroup, "toolPanelUi");
         }
         if (columnsToPivot.length>0) {
-            this.columnController.addPivotColumns(columnsToPivot);
+            this.columnController.addPivotColumns(columnsToPivot, "toolPanelUi");
         }
 
     }
 
     private onColumnStateChanged(): void {
-        let columnsReduced = this.columnController.isPivotMode();
+        let selectedValue = this.workOutSelectedValue();
+        let readOnlyValue = this.workOutReadOnlyValue();
+        this.processingColumnStateChange = true;
+        this.cbSelect.setSelected(selectedValue);
+        if (this.selectionCallback){
+            this.selectionCallback(this.isSelected());
+        }
+        this.cbSelect.setReadOnly(readOnlyValue);
+        this.processingColumnStateChange = false;
+    }
+
+    private workOutReadOnlyValue(): boolean {
+        let pivotMode = this.columnController.isPivotMode();
+
+        let colsThatCanAction = 0;
+
+        this.columnGroup.getLeafColumns().forEach( col => {
+            if (pivotMode) {
+                if (col.isAnyFunctionAllowed()) {
+                    colsThatCanAction++;
+                }
+            } else {
+                if (!col.isLockVisible()) {
+                    colsThatCanAction++;
+                }
+            }
+        });
+
+        return colsThatCanAction === 0;
+    }
+
+    private workOutSelectedValue(): boolean {
+        let pivotMode = this.columnController.isPivotMode();
 
         let visibleChildCount = 0;
         let hiddenChildCount = 0;
 
         this.columnGroup.getLeafColumns().forEach( (column: Column) => {
-            if (this.isColumnVisible(column, columnsReduced)) {
+            if (this.isColumnVisible(column, pivotMode)) {
                 visibleChildCount++;
             } else {
                 hiddenChildCount++;
@@ -258,13 +295,11 @@ export class RenderedGroup extends Component {
             selectedValue = false;
         }
 
-        this.processingColumnStateChange = true;
-        this.cbSelect.setSelected(selectedValue);
-        this.processingColumnStateChange = false;
+        return selectedValue;
     }
 
-    private isColumnVisible(column: Column, columnsReduced: boolean): boolean {
-        if (columnsReduced) {
+    private isColumnVisible(column: Column, pivotMode: boolean): boolean {
+        if (pivotMode) {
             let pivoted = column.isPivotActive();
             let grouped = column.isRowGroupActive();
             let aggregated = column.isValueActive();
@@ -288,5 +323,38 @@ export class RenderedGroup extends Component {
 
     public isExpanded(): boolean {
         return this.expanded;
+    }
+
+    public getDisplayName(): string {
+        return this.displayName;
+    }
+
+    public onSelectAllChanged(value: boolean): void {
+        if (
+            (value && !this.cbSelect.isSelected()) ||
+            (! value && this.cbSelect.isSelected())
+        ){
+            if(!this.cbSelect.isReadOnly()){
+                this.cbSelect.toggle();
+            }
+        }
+    }
+
+    public isSelected(): boolean {
+        return this.cbSelect.isSelected();
+    }
+
+    public isSelectable(): boolean {
+        return !this.cbSelect.isReadOnly();
+    }
+
+    public isExpandable(): boolean {
+        return true;
+    }
+
+    public setExpanded(value: boolean): void {
+        if (this.expanded !== value) {
+            this.onExpandOrContractClicked();
+        }
     }
 }

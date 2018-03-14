@@ -20,17 +20,20 @@ import {
     GridPanel,
     PostConstruct,
     QuerySelector,
-    TouchListener,
-    Utils
+    Utils,
+    RefSelector,
+    _
 } from "ag-grid/main";
+import {BaseColumnItem} from "./columnSelectComp";
 
-export class RenderedColumn extends Component {
+export class ToolPanelColumnComp extends Component implements BaseColumnItem{
 
     private static TEMPLATE =
-        '<div class="ag-column-select-column">' +
-          '<ag-checkbox class="ag-column-select-checkbox"></ag-checkbox>' +
-          '<span class="ag-column-select-label"></span>' +
-        '</div>';
+        `<div class="ag-column-select-column">
+            <ag-checkbox class="ag-column-select-checkbox"></ag-checkbox>
+            <span class="ag-column-drag" ref="eDragHandle"></span>
+            <span class="ag-column-select-label"></span>
+        </div>`;
 
     @Autowired('gridOptionsWrapper') private gridOptionsWrapper: GridOptionsWrapper;
     @Autowired('columnController') private columnController: ColumnController;
@@ -45,34 +48,42 @@ export class RenderedColumn extends Component {
     @QuerySelector('.ag-column-select-indent') private eIndent: HTMLElement;
     @QuerySelector('.ag-column-select-checkbox') private cbSelect: AgCheckbox;
 
+    @RefSelector('eDragHandle') private eDragHandle: HTMLElement;
+
     private column: Column;
     private columnDept: number;
+    private selectionCallback: (selected:boolean)=>void;
 
     private allowDragging: boolean;
     private displayName: string;
 
     private processingColumnStateChange = false;
+    private groupsExist: boolean;
 
-    constructor(column: Column, columnDept: number, allowDragging: boolean) {
+    constructor(column: Column, columnDept: number, allowDragging: boolean, groupsExist: boolean) {
         super();
         this.column = column;
         this.columnDept = columnDept;
         this.allowDragging = allowDragging;
+        this.groupsExist = groupsExist;
     }
 
     @PostConstruct
     public init(): void {
 
-        this.setTemplate(RenderedColumn.TEMPLATE);
+        this.setTemplate(ToolPanelColumnComp.TEMPLATE);
 
         this.displayName = this.columnController.getDisplayNameForColumn(this.column, 'toolPanel');
         this.eText.innerHTML = this.displayName;
 
-        this.addCssClass('ag-toolpanel-indent-' + this.columnDept);
-
-        if (this.allowDragging) {
-            this.addDragSource();
+        // if grouping, we add an extra level of indent, to cater for expand/contract icons we need to indent for
+        let indent = this.columnDept;
+        if (this.groupsExist) {
+            this.addCssClass('ag-toolpanel-add-group-indent');
         }
+        this.addCssClass(`ag-toolpanel-indent-${indent}`);
+
+        this.setupDragging();
 
         this.addDestroyableEventListener(this.eventService, Events.EVENT_COLUMN_PIVOT_MODE_CHANGED, this.onColumnStateChanged.bind(this) );
         this.addDestroyableEventListener(this.column, Column.EVENT_VALUE_CHANGED, this.onColumnStateChanged.bind(this) );
@@ -87,22 +98,8 @@ export class RenderedColumn extends Component {
         this.onColumnStateChanged();
 
         this.addDestroyableEventListener(this.cbSelect, AgCheckbox.EVENT_CHANGED, this.onChange.bind(this));
-        this.addDestroyableEventListener(this.eText, 'click', this.onClick.bind(this));
 
-        this.addTap();
         CssClassApplier.addToolPanelClassesFromColDef(this.column.getColDef(), this.getGui(), this.gridOptionsWrapper, this.column, null);
-    }
-
-    private addTap(): void {
-        let touchListener = new TouchListener(this.getGui());
-        this.addDestroyableEventListener(touchListener, TouchListener.EVENT_TAP, this.onClick.bind(this));
-        this.addDestroyFunc( touchListener.destroy.bind(touchListener) );
-    }
-
-    private onClick(): void {
-        if (this.cbSelect.isReadOnly()) { return; }
-
-        this.cbSelect.toggle();
     }
 
     private onChange(event: any): void {
@@ -120,7 +117,11 @@ export class RenderedColumn extends Component {
                 this.actionUnCheckedPivotMode();
             }
         } else {
-            this.columnController.setColumnVisible(this.column, event.selected);
+            this.columnController.setColumnVisible(this.column, event.selected, "columnMenu");
+        }
+
+        if (this.selectionCallback){
+            this.selectionCallback(this.isSelected());
         }
     }
 
@@ -142,7 +143,7 @@ export class RenderedColumn extends Component {
                 };
                 this.eventService.dispatchEvent(event);
             } else {
-                columnController.removePivotColumn(column);
+                columnController.removePivotColumn(column, "columnMenu");
             }
         }
         // remove value if column is value
@@ -158,7 +159,7 @@ export class RenderedColumn extends Component {
                 };
                 this.eventService.dispatchEvent(event);
             } else {
-                columnController.removeValueColumn(column);
+                columnController.removeValueColumn(column, "columnMenu");
             }
         }
         // remove group if column is grouped
@@ -174,7 +175,7 @@ export class RenderedColumn extends Component {
                 };
                 this.eventService.dispatchEvent(event);
             } else {
-                columnController.removeRowGroupColumn(column);
+                columnController.removeRowGroupColumn(column, "columnMenu");
             }
         }
     }
@@ -199,7 +200,7 @@ export class RenderedColumn extends Component {
                 };
                 this.eventService.dispatchEvent(event);
             } else {
-                this.columnController.addValueColumn(column);
+                this.columnController.addValueColumn(column, "columnMenu");
             }
         } else if (column.isAllowRowGroup()) {
             if (functionPassive) {
@@ -213,7 +214,7 @@ export class RenderedColumn extends Component {
                 };
                 this.eventService.dispatchEvent(event);
             } else {
-                this.columnController.addRowGroupColumn(column);
+                this.columnController.addRowGroupColumn(column, "columnMenu");
             }
         } else if (column.isAllowPivot()) {
             if (functionPassive) {
@@ -227,15 +228,20 @@ export class RenderedColumn extends Component {
                 };
                 this.eventService.dispatchEvent(event);
             } else {
-                this.columnController.addPivotColumn(column);
+                this.columnController.addPivotColumn(column, "columnMenu");
             }
         }
     }
 
-    private addDragSource(): void {
+    private setupDragging(): void {
+        if (!this.allowDragging) {
+            _.setVisible(this.eDragHandle, false);
+            return;
+        }
+
         let dragSource: DragSource = {
             type: DragSourceType.ToolPanel,
-            eElement: this.getGui(),
+            eElement: this.eDragHandle,
             dragItemName: this.displayName,
             dragItemCallback: () => this.createDragItem()
         };
@@ -259,17 +265,29 @@ export class RenderedColumn extends Component {
             // if reducing, checkbox means column is one of pivot, value or group
             let anyFunctionActive = this.column.isAnyFunctionActive();
             this.cbSelect.setSelected(anyFunctionActive);
+            if (this.selectionCallback){
+                this.selectionCallback(this.isSelected());
+            }
         } else {
             // if not reducing, the checkbox tells us if column is visible or not
             this.cbSelect.setSelected(this.column.isVisible());
+            if (this.selectionCallback){
+                this.selectionCallback(this.isSelected());
+            }
         }
 
-        // read only in pivot mode if:
-        let checkboxReadOnly = isPivotMode
-            // a) gui is not allowed make any changes or
-            && (this.gridOptionsWrapper.isFunctionsReadOnly()
-            // b) column is not allow any functions on it
-            || !this.column.isAnyFunctionAllowed());
+        let checkboxReadOnly: boolean;
+        if (isPivotMode) {
+            // when in pivot mode, the item should be read only if:
+            //  a) gui is not allowed make any changes
+            let functionsReadOnly = this.gridOptionsWrapper.isFunctionsReadOnly();
+            //  b) column is not allow any functions on it
+            let noFunctionsAllowed = !this.column.isAnyFunctionAllowed();
+            checkboxReadOnly = functionsReadOnly || noFunctionsAllowed;
+        } else {
+            // when in normal mode, the checkbox is read only if visibility is locked
+            checkboxReadOnly = this.column.isLockVisible();
+        }
 
         this.cbSelect.setReadOnly(checkboxReadOnly);
 
@@ -279,4 +297,31 @@ export class RenderedColumn extends Component {
         this.processingColumnStateChange = false;
     }
 
+    public getDisplayName(): string {
+        return this.displayName;
+    }
+
+    public onSelectAllChanged(value: boolean): void {
+        if (value !== this.cbSelect.isSelected()) {
+            if (!this.cbSelect.isReadOnly()) {
+                this.cbSelect.toggle();
+            }
+        }
+    }
+
+    public isSelected(): boolean {
+        return this.cbSelect.isSelected();
+    }
+
+    public isSelectable(): boolean {
+        return !this.cbSelect.isReadOnly();
+    }
+
+    public isExpandable(): boolean {
+        return false;
+    }
+
+    public setExpanded(value: boolean): void {
+        console.warn('ag-grid: can not expand a column item that does not represent a column group header');
+    }
 }

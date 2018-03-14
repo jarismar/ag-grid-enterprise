@@ -1,6 +1,6 @@
-import {ColumnSelectPanel} from "./toolPanel/columnsSelect/columnSelectPanel";
-import {RenderedColumn} from "./toolPanel/columnsSelect/renderedColumn";
-import {RenderedGroup} from "./toolPanel/columnsSelect/renderedGroup";
+import {ColumnSelectComp} from "./toolPanel/columnsSelect/columnSelectComp";
+import {ToolPanelColumnComp} from "./toolPanel/columnsSelect/toolPanelColumnComp";
+import {ToolPanelGroupComp} from "./toolPanel/columnsSelect/toolPanelGroupComp";
 import {AggregationStage} from "./rowStages/aggregationStage";
 import {GroupStage} from "./rowStages/groupStage";
 import {SetFilter} from "./setFilter/setFilter";
@@ -21,7 +21,7 @@ import {RichSelectRow} from "./rendering/richSelect/richSelectRow";
 import {VirtualList} from "./rendering/virtualList";
 import {AbstractColumnDropPanel} from "./toolPanel/columnDrop/abstractColumnDropPanel";
 import {PivotColumnsPanel} from "./toolPanel/columnDrop/pivotColumnsPanel";
-import {ToolPanelComp} from "./toolPanel/toolPanelComp";
+import {ColumnPanel} from "./toolPanel/columnPanel";
 import {LicenseManager} from "./licenseManager";
 import {PivotStage} from "./rowStages/pivotStage";
 import {PivotColDefService} from "./rowStages/pivotColDefService";
@@ -70,11 +70,11 @@ export function populateClientExports(exports: any): void {
     exports.RowGroupColumnsPanel = RowGroupColumnsPanel;
     exports.ValuesColumnPanel = ValuesColumnPanel;
 
-    exports.ToolPanelComp = ToolPanelComp;
+    exports.ToolPanelComp = ColumnPanel;
 
-    exports.ColumnSelectPanel = ColumnSelectPanel;
-    exports.RenderedColumn = RenderedColumn;
-    exports.RenderedGroup = RenderedGroup;
+    exports.ColumnSelectPanel = ColumnSelectComp;
+    exports.RenderedColumn = ToolPanelColumnComp;
+    exports.RenderedGroup = ToolPanelGroupComp;
 
     exports.ViewportRowModel = ViewportRowModel;
 

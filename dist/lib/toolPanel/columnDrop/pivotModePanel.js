@@ -1,4 +1,4 @@
-// ag-grid-enterprise v15.0.0
+// ag-grid-enterprise v17.0.0
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -41,7 +41,7 @@ var PivotModePanel = (function (_super) {
     PivotModePanel.prototype.onBtPivotMode = function () {
         var newValue = this.cbPivotMode.isSelected();
         if (newValue !== this.columnController.isPivotMode()) {
-            this.columnController.setPivotMode(newValue);
+            this.columnController.setPivotMode(newValue, "toolPanelUi");
             this.gridOptionsWrapper.getApi().refreshHeader();
         }
     };
@@ -70,7 +70,7 @@ var PivotModePanel = (function (_super) {
         __metadata("design:type", main_1.AgCheckbox)
     ], PivotModePanel.prototype, "cbPivotMode", void 0);
     __decorate([
-        main_1.PostConstruct,
+        main_1.PreConstruct,
         __metadata("design:type", Function),
         __metadata("design:paramtypes", []),
         __metadata("design:returntype", void 0)

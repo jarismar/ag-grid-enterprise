@@ -1,17 +1,18 @@
 import {
-    IRowNodeStage,
     Autowired,
-    ColumnController,
-    ValueService,
-    EventService,
-    RowNode,
-    StageExecuteParams,
-    Column,
-    Utils,
+    Bean,
     ColDef,
     ColGroupDef,
+    Column,
+    ColumnController,
+    EventService,
     IRowModel,
-    Bean
+    IRowNodeStage,
+    RowNode,
+    StageExecuteParams,
+    Utils,
+    ValueService,
+    ChangedPath
 } from "ag-grid/main";
 import {PivotColDefService} from "./pivotColDefService";
 
@@ -35,20 +36,24 @@ export class PivotStage implements IRowNodeStage {
 
     public execute(params: StageExecuteParams): void {
         let rootNode = params.rowNode;
+        let changedPath = params.changedPath;
         if (this.columnController.isPivotActive()) {
-            this.executePivotOn(rootNode);
+            this.executePivotOn(rootNode, changedPath);
         } else {
-            this.executePivotOff();
+            this.executePivotOff(changedPath);
         }
     }
 
-    private executePivotOff(): void {
+    private executePivotOff(changedPath: ChangedPath): void {
         this.aggregationColumnsHashLastTime = null;
         this.uniqueValues = {};
-        this.columnController.setSecondaryColumns(null);
+        if (this.columnController.isSecondaryColumnsPresent()) {
+            this.columnController.setSecondaryColumns(null, "rowModelUpdated");
+            changedPath.setInactive();
+        }
     }
 
-    private executePivotOn(rootNode: RowNode): void {
+    private executePivotOn(rootNode: RowNode, changedPath: ChangedPath): void {
         let uniqueValues = this.bucketUpRowNodes(rootNode);
 
         let uniqueValuesChanged = this.setUniqueValues(uniqueValues);
@@ -66,7 +71,10 @@ export class PivotStage implements IRowNodeStage {
             let result = this.pivotColDefService.createPivotColumnDefs(this.uniqueValues);
             this.pivotColumnGroupDefs = result.pivotColumnGroupDefs;
             this.pivotColumnDefs = result.pivotColumnDefs;
-            this.columnController.setSecondaryColumns(this.pivotColumnGroupDefs);
+            this.columnController.setSecondaryColumns(this.pivotColumnGroupDefs, "rowModelUpdated");
+            // because the secondary columns have changed, then the aggregation needs to visit the whole
+            // tree again, so we make the changedPath not active, to force aggregation to visit all paths.
+            changedPath.setInactive();
         }
     }
 
